@@ -42,6 +42,24 @@ Decisions made where the assessment brief is ambiguous, or where a tooling choic
 | Validation schemas | Defined separately in frontend and backend. | No shared workspace package; the backend is always the authority. |
 | Backend modules | ESM with `NodeNext` resolution, so relative imports use `.js` extensions. | Native Node.js ESM without a bundler. |
 | Next.js Cache Components | Kept enabled (the Next.js 16 default from `create-next-app`). | Session reads must sit behind `<Suspense>` boundaries; this is handled per page. |
+| Protected routes and `instant` | Student and mentor layouts/pages set `export const instant = false`. | They verify the session with the backend on every request, so they cannot be instant. Caching the user (`use cache: private`) was rejected to avoid serving a stale user or role after logout or a role change. |
+
+## Authentication and authorization
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Cookie | `access_token`: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` in production, same lifetime as the token. | Not readable by scripts; first-party through the Next.js rewrite. |
+| JWT | HS256, `sub` = user id, `role` claim, 24 h expiry (`JWT_EXPIRES_IN_SECONDS`). Verification pins the algorithm and validates the payload shape. | Rejects `alg: none`, tokens signed with another algorithm and malformed payloads. |
+| Server-side role checks | `authenticate` reads only the cookie; `authorizeRoles(...)` checks `req.user.role` from the verified token. Headers, query strings and bodies are never used for the role. | The frontend checks are UX only; the API is the authority. |
+| Error codes | `401 UNAUTHENTICATED` / `TOKEN_EXPIRED` / `INVALID_TOKEN`, `403 FORBIDDEN`. | The client can tell "log in again" apart from "not allowed". |
+| Signup | Logs the new student in immediately (sets the cookie). | One less step; the account is a `STUDENT` either way. |
+| Login errors | Same `401 INVALID_CREDENTIALS` message for an unknown email and a wrong password; an unknown email is still compared against a dummy bcrypt hash. | Prevents account enumeration through messages or response timing. |
+| Passwords | bcrypt, cost 12. 8–72 characters with at least one letter and one number. | 72 bytes is bcrypt's input limit, so longer passwords are rejected instead of silently truncated. |
+| Logout | Clears the cookie. Tokens are stateless, so a copied token stays valid until it expires. | No token store needed for this scope; the short lifetime limits the window. |
+| CSRF | Relies on `SameSite=Lax` plus JSON request bodies (`Content-Type: application/json`). No CSRF token. | Cross-site forms cannot send the cookie with `POST`/`PATCH`, nor a JSON body without a CORS preflight. |
+| Rate limits | Login: 10 failed attempts per 15 min per IP (successful logins are not counted). Signup: 5 per hour per IP. | Slows down password guessing and mass account creation. |
+| Client IP | `trust proxy` = `TRUST_PROXY` (default `1`, the Next.js server). | Needed to rate-limit by the real client IP behind the rewrite. Limitation: the Next.js dev server keeps a client-supplied `X-Forwarded-For`, so locally the IP can be spoofed. In production, set `TRUST_PROXY` to match the real proxy chain. |
+| Frontend route guard | `proxy.ts` redirects to `/login` when the cookie is missing (fast path only). Layouts and pages call `requireRole`, which asks the backend `/api/auth/me`. | The token is never decoded or trusted in the frontend. |
 
 ## Database
 

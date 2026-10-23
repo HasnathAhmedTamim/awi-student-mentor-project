@@ -26,7 +26,7 @@ Requirements: Node.js 22+ and npm.
 ```bash
 # Backend
 cd backend
-cp .env.example .env   # fill in DATABASE_URL, DIRECT_URL and SEED_MENTOR_*
+cp .env.example .env   # fill in DATABASE_URL, DIRECT_URL, JWT_SECRET and SEED_MENTOR_*
 npm install            # also generates the Prisma client
 npm run db:deploy      # apply migrations
 npm run db:seed        # create the mentor account
@@ -40,6 +40,19 @@ npm run dev        # http://localhost:3000
 ```
 
 The frontend forwards `/api/*` requests to the backend (`BACKEND_URL`).
+
+Generate a `JWT_SECRET` with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+
+### Tests
+
+Backend tests run against a separate, local PostgreSQL database and delete all of its data on every run. The test setup refuses any non-local database host.
+
+```bash
+createdb awi_test            # or create it in pgAdmin
+cd backend
+cp .env.test.example .env.test   # set the local postgres password
+npm test                     # applies migrations to awi_test, then runs Vitest
+```
 
 ## Scripts
 
