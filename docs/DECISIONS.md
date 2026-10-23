@@ -51,6 +51,7 @@ Decisions made where the assessment brief is ambiguous, or where a tooling choic
 | --- | --- | --- |
 | Repository layout | One repo with independent `frontend/` and `backend/` npm projects (no workspaces). | Matches the requested structure and keeps each app runnable on its own. |
 | Package manager | npm. | Simplest for reviewers to install and run. |
+| Environment examples | One example file per app (`backend/.env.example`, `backend/.env.test.example`, `frontend/.env.example`) instead of one at the root. | Each app loads its own variables; a root file would mix server secrets with frontend settings. |
 | API access from the browser | Next.js `rewrites` forward `/api/*` to Express. | The browser only talks to one origin, so the auth cookie is first-party (`SameSite=Lax`) and no cross-site cookie setup is needed. |
 | Token storage | JWT in an `HttpOnly` cookie (`Secure` in production). | Not readable from JavaScript, unlike `localStorage`. |
 | Express 5 | No `asyncHandler` wrapper. | Express 5 forwards rejected promises from handlers to the error middleware. |

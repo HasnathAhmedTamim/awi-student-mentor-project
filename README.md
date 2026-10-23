@@ -1,73 +1,152 @@
 # Student Project Submission & Mentor Review
 
-Students submit their projects; mentors review, approve, or reject them.
+A full-stack dashboard where students submit their projects and mentors review, approve or reject them.
 
-> Work in progress. Full setup, API, and architecture docs will be added as features land.
+- **Students** sign up, submit projects (name, GitHub repository, live URL, description) and follow each submission's status and the mentor's feedback.
+- **Mentors** see statistics for all submissions, filter and page through them on the server, and approve or reject pending ones with an optional note.
 
-## Stack
+Access is protected with JWT authentication in an HttpOnly cookie and role-based access control (`STUDENT`, `MENTOR`) enforced by the API.
 
-- **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS, shadcn/ui, React Hook Form, Zod
-- **Backend:** Express 5, TypeScript, Zod
-- **Database:** PostgreSQL (Neon) via Prisma ORM
-- **Auth:** JWT in an HttpOnly cookie, role-based access control (`STUDENT`, `MENTOR`)
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System overview, backend modules, database, authentication and authorization flow, workflows |
+| [`docs/API.md`](docs/API.md) | Every endpoint with access rules, validation, examples and error codes |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Decisions made where the brief was ambiguous, with reasons |
+
+## Technology
+
+| Area | Stack |
+| --- | --- |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui, React Hook Form, Zod, Sonner |
+| Backend | Node.js, Express 5, TypeScript, Zod, JSON Web Tokens, bcrypt, Helmet, express-rate-limit |
+| Database | PostgreSQL (Neon in development) with Prisma 7 |
+| Testing | Vitest and Supertest against a local PostgreSQL test database |
 
 ## Project structure
 
 ```text
-frontend/   Next.js app (UI)
-backend/    Express API
+frontend/   Next.js app: pages, forms, UI components
+backend/    Express API: modules (auth, submissions, mentor), middleware, Prisma schema and migrations
 docs/       Architecture, API and decision records
 ```
 
-## Getting started
+## Prerequisites
 
-Requirements: Node.js 22+ and npm.
+- Node.js 22 or newer and npm
+- A PostgreSQL database for development (for example a free [Neon](https://neon.tech) project)
+- A local PostgreSQL server for the tests (they delete all data in their database)
+
+## Setup
+
+### 1. Backend
 
 ```bash
-# Backend
 cd backend
-cp .env.example .env   # fill in DATABASE_URL, DIRECT_URL, JWT_SECRET and SEED_MENTOR_*
-npm install            # also generates the Prisma client
-npm run db:deploy      # apply migrations
-npm run db:seed        # create the mentor account
-npm run dev            # http://localhost:5000
+cp .env.example .env
+npm install          # also generates the Prisma client
+```
 
-# Frontend (in a second terminal)
+Edit `backend/.env`:
+
+| Variable | Description |
+| --- | --- |
+| `DATABASE_URL` | Connection string used by the app. With Neon, the **pooled** URL (host contains `-pooler`). |
+| `DIRECT_URL` | Connection string used by migrations. With Neon, the **direct** URL. With a plain PostgreSQL server, the same as `DATABASE_URL`. |
+| `JWT_SECRET` | At least 32 random characters. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. |
+| `JWT_EXPIRES_IN_SECONDS` | Token and cookie lifetime. Default `86400` (24 hours). |
+| `SEED_MENTOR_NAME`, `SEED_MENTOR_EMAIL`, `SEED_MENTOR_PASSWORD` | The mentor account created by the seed script. Choose your own password (at least 8 characters). |
+| `PORT` | API port. Default `5000`. |
+| `CLIENT_ORIGIN` | Frontend URL allowed by CORS. Default `http://localhost:3000`. |
+| `TRUST_PROXY` | Number of proxies in front of the API, used to find the client IP for rate limiting. Default `1` (the Next.js server). |
+
+Create the tables and the mentor account:
+
+```bash
+npm run db:deploy    # apply the migrations
+npm run db:seed      # create the mentor from SEED_MENTOR_*
+```
+
+The seed is safe to run again: it never creates a second mentor and never changes an existing password.
+
+### 2. Frontend
+
+```bash
 cd frontend
 cp .env.example .env.local
 npm install
-npm run dev        # http://localhost:3000
 ```
 
-The frontend forwards `/api/*` requests to the backend (`BACKEND_URL`).
+`BACKEND_URL` in `.env.local` is where Next.js forwards `/api/*` requests (default `http://localhost:5000`).
 
-Generate a `JWT_SECRET` with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+### 3. Run
 
-### Tests
-
-Backend tests run against a separate, local PostgreSQL database and delete all of its data on every run. The test setup refuses any non-local database host.
+Start both servers in separate terminals:
 
 ```bash
-createdb awi_test            # or create it in pgAdmin
-cd backend
-cp .env.test.example .env.test   # set the local postgres password
-npm test                     # applies migrations to awi_test, then runs Vitest
+cd backend && npm run dev     # API on http://localhost:5000
+cd frontend && npm run dev    # app on http://localhost:3000
 ```
 
-## Scripts
+Open http://localhost:3000.
+
+## Demo workflow
+
+**Student**
+
+1. Open http://localhost:3000 and choose **Sign up as a student**. You are logged in and taken to your dashboard.
+2. Choose **New submission** and submit a project, for example repository `https://github.com/your-name/your-project` and live URL `https://your-project.vercel.app`.
+3. The project appears on your dashboard as **Pending**.
+4. Submit the same repository again (try `https://github.com/YOUR-NAME/your-project.git`): the form shows "You have already submitted this repository."
+5. Log out.
+
+**Mentor**
+
+1. Log in with the `SEED_MENTOR_EMAIL` and `SEED_MENTOR_PASSWORD` from `backend/.env`.
+2. The dashboard shows statistics (total, pending, approved, rejected) and a paginated table of all submissions.
+3. Filter by **Pending** and open the student's project.
+4. Optionally write a review note, choose **Approve** or **Reject**, and confirm. The statistics and table update.
+5. Log out, log in as the student again and open the project: the status and the mentor's note are shown.
+
+**Security checks with an API client** (Postman, curl): log in as the student, then call `GET /api/mentor/statistics` or `PATCH /api/mentor/submissions/<id>/status` → `403 FORBIDDEN`. Without a cookie → `401 UNAUTHENTICATED`. See [`docs/API.md`](docs/API.md).
+
+## Tests and checks
+
+### Backend tests
+
+The tests run against a separate **local** PostgreSQL database and delete all of its data on every run. The test setup refuses any database host other than `localhost`.
+
+```bash
+createdb awi_test                  # or create the database in pgAdmin
+cd backend
+cp .env.test.example .env.test     # set your local postgres password
+npm test                           # applies the migrations to awi_test, then runs Vitest
+```
+
+They cover signup and login, token handling (missing, malformed, wrong secret, unsigned, expired), role checks on every protected endpoint, submission validation and duplicates, ownership, pagination and filtering, statistics, approval and rejection, repeated and concurrent reviews, and rate limiting.
+
+### All checks
 
 | Location | Command | Purpose |
 | --- | --- | --- |
-| backend | `npm run dev` | Start the API with hot reload |
-| backend | `npm run build` / `npm start` | Compile and run the production build |
-| backend | `npm test` | Run tests |
-| backend | `npm run lint` / `npm run typecheck` | Static checks |
-| backend | `npm run db:migrate` | Create/apply a migration in development |
-| backend | `npm run db:deploy` | Apply existing migrations |
-| backend | `npm run db:seed` | Create or update the mentor account |
-| backend | `npm run db:studio` | Browse data with Prisma Studio |
-| frontend | `npm run dev` | Start the Next.js dev server |
-| frontend | `npm run build` / `npm start` | Production build |
-| frontend | `npm run lint` / `npm run typecheck` | Static checks |
+| backend | `npm run typecheck` | TypeScript |
+| backend | `npm run lint` | ESLint |
+| backend | `npx prisma validate` | Prisma schema |
+| backend | `npm test` | Tests |
+| backend | `npm run build` / `npm start` | Compile to `dist/` / run the build |
+| frontend | `npm run typecheck` | Generates the Next.js route types, then runs TypeScript |
+| frontend | `npm run lint` | ESLint |
+| frontend | `npm run build` / `npm start` | Production build / run it |
 
-Design decisions are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+Other backend scripts: `npm run db:migrate` (create a migration during development), `npm run db:studio` (browse data with Prisma Studio).
+
+## Known limitations
+
+- **Stateless tokens.** Logout clears the cookie, but a copied token stays valid until it expires (24 hours by default). The API reads the role from the token, so a role change would only apply after a new login; roles never change in this app.
+- **Rate limits are in memory.** Counters are per server process and reset on restart. With several API instances, a shared store such as Redis would be needed. In local development the client IP can be spoofed through `X-Forwarded-For` (see `docs/DECISIONS.md`).
+- **Mentors come only from the seed script.** There is no admin UI, no password reset and no email verification.
+- **Reviews are final.** A reviewed submission cannot be edited, re-opened or reviewed again, and any mentor can review any submission (no assignment).
+- **GitHub only.** Repository URLs must be `https://github.com/<owner>/<repo>`.
+- **No frontend Content Security Policy.** The frontend sends clickjacking, MIME-sniffing and referrer headers; a strict CSP would need per-request nonces. The API sends Helmet's default headers, including a CSP.
+- **Automated tests cover the backend only.** The frontend was verified manually in the browser (workflows, keyboard focus, mobile layout); there are no end-to-end browser tests.
