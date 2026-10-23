@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 import { isProduction } from "../config/env.js";
+import { Prisma } from "../generated/prisma/client.js";
 import { sendError } from "../utils/api-response.js";
 import { AppError } from "../utils/app-error.js";
 
@@ -28,6 +29,21 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
         message: issue.message,
       })),
     });
+  }
+
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
+      return sendError(res, 409, {
+        code: "CONFLICT",
+        message: "A record with the same unique value already exists.",
+      });
+    }
+    if (error.code === "P2025") {
+      return sendError(res, 404, {
+        code: "NOT_FOUND",
+        message: "The requested record was not found.",
+      });
+    }
   }
 
   if (isBodyParserError(error)) {

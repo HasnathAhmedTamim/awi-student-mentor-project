@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  STUDENT
+  MENTOR
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String
+  role         Role     @default(STUDENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  submissions Submission[] @relation("StudentSubmissions")
+  reviews     Submission[] @relation("ReviewerSubmissions")
+
+  @@map("users")
+}
+
+model Submission {
+  id                      String           @id @default(uuid()) @db.Uuid
+  studentId               String           @db.Uuid
+  projectName             String           @db.VarChar(120)
+  repositoryUrl           String           @db.VarChar(300)
+  repositoryUrlNormalized String           @db.VarChar(300)
+  liveUrl                 String           @db.VarChar(300)
+  description             String           @db.VarChar(2000)
+  status                  SubmissionStatus @default(PENDING)
+  reviewNote              String?          @db.VarChar(500)
+  reviewedById            String?          @db.Uuid
+  reviewedAt              DateTime?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  student    User  @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("ReviewerSubmissions", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, repositoryUrlNormalized])
+  @@index([status, createdAt])
+  @@index([studentId, createdAt])
+  @@map("submissions")
+}

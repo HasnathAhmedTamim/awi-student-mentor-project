@@ -7,6 +7,7 @@ const envSchema = z.object({
     .default("development"),
   PORT: z.coerce.number().int().positive().default(5000),
   CLIENT_ORIGIN: z.url().default("http://localhost:3000"),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 });
 
 const parsed = envSchema.safeParse(process.env);
