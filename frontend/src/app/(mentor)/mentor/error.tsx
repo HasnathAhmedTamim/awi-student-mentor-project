@@ -1,0 +1,17 @@
+"use client";
+
+import { useEffect } from "react";
+import { ErrorState } from "@/components/shared/error-state";
+import { PageContainer } from "@/components/shared/page-container";
+
+export default function MentorError({ error, retry }: { error: unknown; retry: () => void }) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <PageContainer>
+      <ErrorState message="We could not load the mentor dashboard. Please try again." onRetry={retry} />
+    </PageContainer>
+  );
+}

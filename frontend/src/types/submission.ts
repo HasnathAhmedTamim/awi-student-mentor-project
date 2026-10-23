@@ -13,6 +13,17 @@ export type Submission = {
   updatedAt: string;
 };
 
+export type MentorSubmission = Submission & {
+  student: { id: string; name: string; email: string };
+};
+
+export type SubmissionStatistics = {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+};
+
 export type SubmissionDetail = Submission & {
   student: { id: string; name: string; email: string };
   reviewedBy: { id: string; name: string } | null;

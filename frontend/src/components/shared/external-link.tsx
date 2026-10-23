@@ -2,9 +2,17 @@ import { ExternalLinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Opens user-supplied URLs safely. Anything that is not http(s) is shown as plain text. */
-export function ExternalLink({ href, className }: { href: string; className?: string }) {
+export function ExternalLink({
+  href,
+  className,
+  children = href,
+}: {
+  href: string;
+  className?: string;
+  children?: React.ReactNode;
+}) {
   if (!/^https?:\/\//i.test(href)) {
-    return <span className={cn("break-all", className)}>{href}</span>;
+    return <span className={cn("break-all", className)}>{children}</span>;
   }
 
   return (
@@ -17,7 +25,7 @@ export function ExternalLink({ href, className }: { href: string; className?: st
         className,
       )}
     >
-      {href}
+      {children}
       <ExternalLinkIcon className="size-3.5 shrink-0" aria-hidden="true" />
       <span className="sr-only">(opens in a new tab)</span>
     </a>

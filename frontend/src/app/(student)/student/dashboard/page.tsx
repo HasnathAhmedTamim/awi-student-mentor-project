@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { SubmissionList } from "@/features/submissions/components/submission-list";
 import { getMySubmissions } from "@/features/submissions/server";
 import { requireRole } from "@/lib/auth/session";
-import { parsePageParam } from "@/lib/format";
+import { parsePageParam } from "@/lib/search-params";
 
 export const metadata: Metadata = { title: "Student dashboard" };
 export const instant = false;
