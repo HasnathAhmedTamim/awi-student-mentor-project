@@ -1,8 +1,10 @@
 import { SubmissionStatus, type Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
+import { isForeignKeyConstraintError } from "../../lib/prisma-errors.js";
+import { AppError } from "../../utils/app-error.js";
 import { buildPaginationMeta, toSkipTake } from "../../utils/pagination.js";
-import { submissionSelect } from "../submissions/submissions.types.js";
-import type { ListMentorSubmissionsQuery } from "./mentor.validation.js";
+import { submissionDetailSelect, submissionSelect } from "../submissions/submissions.types.js";
+import type { ListMentorSubmissionsQuery, ReviewSubmissionInput } from "./mentor.validation.js";
 
 const mentorSubmissionSelect = {
   ...submissionSelect,
@@ -38,4 +40,46 @@ export async function getStatistics() {
   const rejected = countFor(SubmissionStatus.REJECTED);
 
   return { total: pending + approved + rejected, pending, approved, rejected };
+}
+
+/**
+ * Moves a PENDING submission to APPROVED or REJECTED. The status check is part of
+ * the UPDATE's WHERE clause, so of two concurrent reviews only one can succeed.
+ */
+export async function reviewSubmission(
+  reviewerId: string,
+  id: string,
+  { status, reviewNote }: ReviewSubmissionInput,
+) {
+  let updated: number;
+  try {
+    ({ count: updated } = await prisma.submission.updateMany({
+      where: { id, status: SubmissionStatus.PENDING },
+      data: { status, reviewNote: reviewNote ?? null, reviewedById: reviewerId, reviewedAt: new Date() },
+    }));
+  } catch (error) {
+    // The token is still valid but the mentor's account has been deleted.
+    if (isForeignKeyConstraintError(error)) {
+      throw new AppError(401, "UNAUTHENTICATED", "Your account no longer exists. Please log in again.");
+    }
+    throw error;
+  }
+
+  const submission = await prisma.submission.findUnique({
+    where: { id },
+    select: submissionDetailSelect,
+  });
+
+  if (!submission) {
+    throw new AppError(404, "SUBMISSION_NOT_FOUND", "Submission not found.");
+  }
+  if (updated === 0) {
+    throw new AppError(
+      409,
+      "SUBMISSION_ALREADY_REVIEWED",
+      `This submission has already been ${submission.status.toLowerCase()}.`,
+    );
+  }
+
+  return submission;
 }
