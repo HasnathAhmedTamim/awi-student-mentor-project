@@ -8,6 +8,7 @@ import { FormError } from "@/components/shared/form-error";
 import { fieldDescriptionId, FormField } from "@/components/shared/form-field";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
+import { useResetWhenHidden } from "@/hooks/use-reset-when-hidden";
 import { api } from "@/lib/api/client";
 import { dashboardPath } from "@/lib/auth/constants";
 import { applyApiError } from "@/lib/forms";
@@ -20,15 +21,18 @@ export function LoginForm() {
     register,
     handleSubmit,
     setError,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
+  const resetWhenHidden = useResetWhenHidden(reset);
 
   async function onSubmit(values: LoginValues) {
     try {
       const { data } = await api.post<{ user: User }>("/auth/login", values);
+      resetWhenHidden();
       toast.success(`Welcome back, ${data.user.name}.`);
       router.replace(dashboardPath(data.user.role));
       router.refresh();

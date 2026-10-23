@@ -11,7 +11,7 @@ export default function MentorError({ error, retry }: { error: unknown; retry: (
 
   return (
     <PageContainer>
-      <ErrorState message="We could not load the mentor dashboard. Please try again." onRetry={retry} />
+      <ErrorState message="We could not load this page. Please try again." onRetry={retry} />
     </PageContainer>
   );
 }

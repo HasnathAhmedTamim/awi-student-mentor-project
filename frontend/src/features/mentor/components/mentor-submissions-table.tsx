@@ -9,10 +9,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { type DashboardView, mentorSubmissionHref } from "@/features/mentor/dashboard-href";
 import { formatDate } from "@/lib/format";
 import type { MentorSubmission } from "@/types/submission";
 
-export function MentorSubmissionsTable({ submissions }: { submissions: MentorSubmission[] }) {
+export function MentorSubmissionsTable({
+  submissions,
+  view,
+}: {
+  submissions: MentorSubmission[];
+  view: DashboardView;
+}) {
   return (
     <div className="rounded-xl border">
       <Table>
@@ -29,7 +36,7 @@ export function MentorSubmissionsTable({ submissions }: { submissions: MentorSub
             <TableRow key={submission.id}>
               <TableCell className="max-w-72 min-w-44 px-4 py-3 whitespace-normal">
                 <Link
-                  href={`/mentor/submissions/${submission.id}`}
+                  href={mentorSubmissionHref(submission.id, view)}
                   className="font-medium underline-offset-4 hover:underline"
                 >
                   {submission.projectName}

@@ -8,6 +8,7 @@ export default function StudentNotFound() {
     <PageContainer>
       <EmptyState
         title="Not found"
+        titleAs="h1"
         description="This page or submission does not exist, or it belongs to another student."
         action={
           <Button asChild variant="outline">

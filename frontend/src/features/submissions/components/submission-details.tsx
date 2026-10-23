@@ -16,7 +16,9 @@ export function SubmissionDetails({ submission, showStudent = false, pendingRevi
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-xl">{submission.projectName}</CardTitle>
+          <CardTitle className="min-w-0 text-xl break-words">
+            <h1>{submission.projectName}</h1>
+          </CardTitle>
           <StatusBadge status={submission.status} />
         </CardHeader>
         <CardContent>
@@ -48,7 +50,9 @@ export function SubmissionDetails({ submission, showStudent = false, pendingRevi
 
       <Card>
         <CardHeader>
-          <CardTitle>Review</CardTitle>
+          <CardTitle>
+            <h2>Review</h2>
+          </CardTitle>
         </CardHeader>
         <CardContent className="text-sm">
           {submission.status === "PENDING" ? (

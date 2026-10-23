@@ -113,7 +113,7 @@ async function Submissions({ page, status }: { page: number; status?: Submission
 
   return (
     <div className="space-y-4">
-      <MentorSubmissionsTable submissions={submissions} />
+      <MentorSubmissionsTable submissions={submissions} view={{ status, page: meta.page }} />
       <PaginationControls
         page={meta.page}
         totalPages={meta.totalPages}

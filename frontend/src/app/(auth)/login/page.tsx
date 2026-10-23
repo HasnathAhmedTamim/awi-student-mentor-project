@@ -9,7 +9,9 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Log in</CardTitle>
+        <CardTitle className="text-xl">
+          <h1>Log in</h1>
+        </CardTitle>
         <CardDescription>Students and mentors log in here.</CardDescription>
       </CardHeader>
       <CardContent>

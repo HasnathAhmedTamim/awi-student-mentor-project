@@ -23,7 +23,9 @@ export default async function NewSubmissionPage() {
       </Button>
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Submit a project</CardTitle>
+          <CardTitle className="text-xl">
+            <h1>Submit a project</h1>
+          </CardTitle>
           <CardDescription>
             A mentor will review it. You can submit each repository only once.
           </CardDescription>

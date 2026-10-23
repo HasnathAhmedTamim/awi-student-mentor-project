@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2Icon } from "lucide-react";
+import { useRef } from "react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -24,7 +25,11 @@ type ConfirmDialogProps = {
   onConfirm: () => void;
 };
 
-/** Stays open while `pending`, so the result of the action is visible before it closes. */
+/**
+ * Stays open while `pending`, so the result of the action is visible before it closes.
+ * Opened from code rather than a trigger, so it returns focus itself to whatever was
+ * focused when it opened.
+ */
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -36,9 +41,19 @@ export function ConfirmDialog({
   destructive = false,
   onConfirm,
 }: ConfirmDialogProps) {
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
   return (
     <AlertDialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <AlertDialogContent>
+      <AlertDialogContent
+        onOpenAutoFocus={() => {
+          returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          returnFocusRef.current?.focus();
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>

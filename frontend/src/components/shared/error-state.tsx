@@ -16,7 +16,9 @@ export function ErrorState({
   return (
     <Alert variant="destructive">
       <CircleAlertIcon />
-      <AlertTitle>{title}</AlertTitle>
+      <AlertTitle>
+        <h1>{title}</h1>
+      </AlertTitle>
       <AlertDescription>
         <p>{message}</p>
         {onRetry && (

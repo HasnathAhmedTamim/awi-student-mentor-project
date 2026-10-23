@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FormError } from "@/components/shared/form-error";
@@ -10,6 +10,7 @@ import { fieldDescriptionId, FormField } from "@/components/shared/form-field";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useResetWhenHidden } from "@/hooks/use-reset-when-hidden";
 import { api } from "@/lib/api/client";
 import { applyApiError } from "@/lib/forms";
 import { submissionSchema, type SubmissionValues } from "@/lib/validations/submission";
@@ -24,16 +25,24 @@ export function SubmissionForm() {
     register,
     handleSubmit,
     setError,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<SubmissionValues>({
     resolver: zodResolver(submissionSchema),
     defaultValues: { projectName: "", repositoryUrl: "", liveUrl: "", description: "" },
   });
+  const resetWhenHidden = useResetWhenHidden(
+    useCallback(() => {
+      reset();
+      setSubmitted(false);
+    }, [reset]),
+  );
 
   async function onSubmit(values: SubmissionValues) {
     try {
       await api.post<{ submission: Submission }>("/submissions", values);
       setSubmitted(true);
+      resetWhenHidden();
       toast.success("Project submitted for review.");
       router.replace("/student/dashboard");
       router.refresh();

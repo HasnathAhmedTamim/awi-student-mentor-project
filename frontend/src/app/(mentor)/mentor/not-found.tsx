@@ -8,6 +8,7 @@ export default function MentorNotFound() {
     <PageContainer>
       <EmptyState
         title="Not found"
+        titleAs="h1"
         description="This page or submission does not exist."
         action={
           <Button asChild variant="outline">

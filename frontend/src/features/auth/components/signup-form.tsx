@@ -8,6 +8,7 @@ import { FormError } from "@/components/shared/form-error";
 import { fieldDescriptionId, FormField } from "@/components/shared/form-field";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
+import { useResetWhenHidden } from "@/hooks/use-reset-when-hidden";
 import { api } from "@/lib/api/client";
 import { dashboardPath } from "@/lib/auth/constants";
 import { applyApiError } from "@/lib/forms";
@@ -20,15 +21,18 @@ export function SignupForm() {
     register,
     handleSubmit,
     setError,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
   });
+  const resetWhenHidden = useResetWhenHidden(reset);
 
   async function onSubmit({ name, email, password }: SignupValues) {
     try {
       const { data } = await api.post<{ user: User }>("/auth/signup", { name, email, password });
+      resetWhenHidden();
       toast.success("Account created. Welcome!");
       router.replace(dashboardPath(data.user.role));
       router.refresh();

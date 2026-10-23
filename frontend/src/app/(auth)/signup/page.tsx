@@ -9,7 +9,9 @@ export default function SignupPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Create a student account</CardTitle>
+        <CardTitle className="text-xl">
+          <h1>Create a student account</h1>
+        </CardTitle>
         <CardDescription>Submit your projects and track their review status.</CardDescription>
       </CardHeader>
       <CardContent>
