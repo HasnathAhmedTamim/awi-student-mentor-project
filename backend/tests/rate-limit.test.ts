@@ -19,4 +19,23 @@ describe("createRateLimiter", () => {
     expect(res.body).toEqual({ success: false, code: "RATE_LIMITED", message: "Slow down." });
     expect(res.headers).toHaveProperty("ratelimit");
   });
+
+  it("counts requests per key when a key generator is given", async () => {
+    const app = express();
+    app.use(
+      createRateLimiter({
+        windowMs: 60_000,
+        limit: 1,
+        message: "Slow down.",
+        keyGenerator: (req) => String(req.headers["x-test-user"]),
+      }),
+    );
+    app.get("/", (_req, res) => {
+      res.json({ success: true });
+    });
+
+    await request(app).get("/").set("x-test-user", "a").expect(200);
+    await request(app).get("/").set("x-test-user", "a").expect(429);
+    await request(app).get("/").set("x-test-user", "b").expect(200);
+  });
 });

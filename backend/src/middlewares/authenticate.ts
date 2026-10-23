@@ -27,7 +27,7 @@ export const authenticate: RequestHandler = (req, _res, next) => {
 };
 
 /** Returns the authenticated user; use only on routes behind `authenticate`. */
-export function getAuthUser(req: Request): AuthUser {
+export function getAuthUser(req: Pick<Request, "user">): AuthUser {
   if (!req.user) throw unauthenticated();
   return req.user;
 }

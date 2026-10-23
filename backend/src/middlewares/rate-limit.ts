@@ -1,4 +1,5 @@
-import { rateLimit } from "express-rate-limit";
+import type { Request } from "express";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { isTest } from "../config/env.js";
 import { sendError } from "../utils/api-response.js";
 
@@ -8,6 +9,7 @@ type RateLimiterOptions = {
   message: string;
   skipSuccessfulRequests?: boolean;
   skip?: boolean;
+  keyGenerator?: (req: Request) => string;
 };
 
 export function createRateLimiter({
@@ -16,12 +18,14 @@ export function createRateLimiter({
   message,
   skipSuccessfulRequests = false,
   skip = false,
+  keyGenerator,
 }: RateLimiterOptions) {
   return rateLimit({
     windowMs,
     limit,
     skipSuccessfulRequests,
     skip: () => skip,
+    ...(keyGenerator && { keyGenerator }),
     standardHeaders: "draft-8",
     legacyHeaders: false,
     handler: (_req, res) => {
@@ -46,4 +50,13 @@ export const signupRateLimiter = createRateLimiter({
   limit: 5,
   message: "Too many accounts created from this network. Please try again later.",
   skip: isTest,
+});
+
+/** Keyed by student, so classmates sharing one network do not block each other. Must run after `authenticate`. */
+export const submissionRateLimiter = createRateLimiter({
+  windowMs: 60 * MINUTE,
+  limit: 20,
+  message: "You have submitted too many projects recently. Please try again later.",
+  skip: isTest,
+  keyGenerator: (req) => (req.user ? `user:${req.user.id}` : ipKeyGenerator(req.ip ?? "")),
 });

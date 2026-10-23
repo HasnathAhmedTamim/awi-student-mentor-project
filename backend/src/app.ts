@@ -7,6 +7,7 @@ import { env } from "./config/env.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { notFound } from "./middlewares/not-found.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
+import { submissionsRouter } from "./modules/submissions/submissions.routes.js";
 import { sendSuccess } from "./utils/api-response.js";
 
 export function createApp() {
@@ -24,6 +25,7 @@ export function createApp() {
   });
 
   app.use("/api/auth", authRouter);
+  app.use("/api/submissions", submissionsRouter);
 
   app.use(notFound);
   app.use(errorHandler);

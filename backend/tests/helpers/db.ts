@@ -25,3 +25,21 @@ export async function createUser(
     },
   });
 }
+
+export async function createSubmission(
+  studentId: string,
+  overrides: Partial<{ projectName: string; repo: string; createdAt: Date }> = {},
+) {
+  const repo = overrides.repo ?? `owner/repo-${crypto.randomUUID()}`;
+  return prisma.submission.create({
+    data: {
+      studentId,
+      projectName: overrides.projectName ?? "Test Project",
+      repositoryUrl: `https://github.com/${repo}`,
+      repositoryUrlNormalized: `https://github.com/${repo}`.toLowerCase(),
+      liveUrl: "https://example.com",
+      description: "A project created for tests.",
+      ...(overrides.createdAt && { createdAt: overrides.createdAt }),
+    },
+  });
+}
