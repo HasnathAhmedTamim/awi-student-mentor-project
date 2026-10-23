@@ -37,7 +37,7 @@ export async function createSubmission(studentId: string, input: CreateSubmissio
 
 export async function listStudentSubmissions(studentId: string, pagination: PaginationQuery) {
   const where = { studentId };
-  const [submissions, total] = await prisma.$transaction([
+  const [submissions, total] = await Promise.all([
     prisma.submission.findMany({
       where,
       select: submissionSelect,

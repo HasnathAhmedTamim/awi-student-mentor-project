@@ -1,4 +1,4 @@
-import { Role } from "../../src/generated/prisma/client.js";
+import { Role, type SubmissionStatus } from "../../src/generated/prisma/client.js";
 import { hashPassword } from "../../src/lib/password.js";
 import { prisma } from "../../src/lib/prisma.js";
 import { assertLocalTestDatabase } from "./assert-test-database.js";
@@ -28,7 +28,12 @@ export async function createUser(
 
 export async function createSubmission(
   studentId: string,
-  overrides: Partial<{ projectName: string; repo: string; createdAt: Date }> = {},
+  overrides: Partial<{
+    projectName: string;
+    repo: string;
+    createdAt: Date;
+    status: SubmissionStatus;
+  }> = {},
 ) {
   const repo = overrides.repo ?? `owner/repo-${crypto.randomUUID()}`;
   return prisma.submission.create({
@@ -40,6 +45,7 @@ export async function createSubmission(
       liveUrl: "https://example.com",
       description: "A project created for tests.",
       ...(overrides.createdAt && { createdAt: overrides.createdAt }),
+      ...(overrides.status && { status: overrides.status }),
     },
   });
 }
