@@ -16,6 +16,11 @@ Decisions made where the assessment brief is ambiguous, or where a tooling choic
 | Pagination | Default 10 per page, max 50. | Bounded queries regardless of client input. |
 | Mentor seed | `npm run db:seed` upserts the mentor from `SEED_MENTOR_*` env vars. Re-running it never duplicates the user or resets an existing password. | The brief allows seeding the admin directly; idempotent seeding is safe to run repeatedly. |
 | Rate limiting | `express-rate-limit` with the in-memory store on signup, login and submission creation. | Meets "basic rate limit". Limitation: counters are per process and reset on restart. |
+| Live URL | Required. Must be `http` or `https` with a public domain name (no `localhost` or IP addresses), max 300 characters. | Reviewers need a reachable deployment; other protocols such as `javascript:` are rejected. |
+| Stored repository URL | The canonical form `https://github.com/<owner>/<repo>` is stored, keeping the student's letter case. The lowercase form is stored separately for duplicate checks and never returned by the API. | Clean links for reviewers, case-insensitive duplicate detection. |
+| Submission rate limit | 20 new submissions per hour per student (keyed by user id, not IP). | Students on a shared campus network do not block each other. |
+| Reading a submission | `GET /api/submissions/:id`: a student can read only their own (another student's id returns `404`, not `403`); a mentor can read any. | Does not reveal whether someone else's submission exists. |
+| "My submissions" list | Paginated on the server like the mentor list (default 10, max 50), newest first. | Bounded queries; the same pagination rules everywhere. |
 
 ### Review note validation policy
 
