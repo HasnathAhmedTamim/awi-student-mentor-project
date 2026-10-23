@@ -21,6 +21,10 @@ Decisions made where the assessment brief is ambiguous, or where a tooling choic
 | Submission rate limit | 20 new submissions per hour per student (keyed by user id, not IP). | Students on a shared campus network do not block each other. |
 | Reading a submission | `GET /api/submissions/:id`: a student can read only their own (another student's id returns `404`, not `403`); a mentor can read any. | Does not reveal whether someone else's submission exists. |
 | "My submissions" list | Paginated on the server like the mentor list (default 10, max 50), newest first. | Bounded queries; the same pagination rules everywhere. |
+| Mentor submissions list | `GET /api/mentor/submissions`, mentor-only. Newest first (`createdAt` then `id`, so equal timestamps keep a stable order). Each row includes the student's id, name and email only. The status filter is an exact `PENDING`/`APPROVED`/`REJECTED` value; "All" means omitting it. Anything else is a `400`. | Stable paging; no password hashes or other user fields leak; invalid filters fail loudly instead of silently showing everything. |
+| Mentor statistics | `GET /api/mentor/statistics` counts all submissions with one `groupBy` on status. Statuses with no submissions return `0`. | One query, always consistent with the stored data, independent of the current filter or page. |
+| Filter and page in the URL | The dashboard reads `?status=` and `?page=` from the URL. Invalid values fall back to "All" and page 1; a page past the end shows an empty state with a link to the first page. | Filtered views can be shared and reloaded, and the back button works. |
+| Mentor table on small screens | Below the `sm` breakpoint the Student column is hidden and the student's name is shown under the project; the Submitted column is hidden below `md`. | The table fits a phone screen without horizontal scrolling. |
 
 ### Review note validation policy
 
@@ -77,6 +81,7 @@ Decisions made where the assessment brief is ambiguous, or where a tooling choic
 | Deleting users | Deleting a student deletes their submissions; deleting a mentor keeps the submissions and clears `reviewedById`. | Review history should not disappear with a reviewer account. |
 | Connections | App uses Neon's pooled `DATABASE_URL` through `@prisma/adapter-pg`; Prisma CLI (migrations) uses the direct `DIRECT_URL` via `prisma.config.ts`. | Migrations need a direct (non-pooled) session; the app benefits from pooling. |
 | TLS | `sslmode=verify-full`. | Verifies the server certificate. `pg` warns that `require` will change meaning in a future version. |
+| Paginated list queries | The page of rows and the total count run as two parallel queries (`Promise.all`), not an interactive `$transaction`. | Against Neon, a `$transaction` sometimes failed to start within Prisma's 2 s `maxWait` (`P2028`). For a read-only list, a count that is off by one during a concurrent insert is acceptable. |
 
 ## Tooling
 
