@@ -1,0 +1,71 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { FormError } from "@/components/shared/form-error";
+import { fieldDescriptionId, FormField } from "@/components/shared/form-field";
+import { SubmitButton } from "@/components/shared/submit-button";
+import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api/client";
+import { dashboardPath } from "@/lib/auth/constants";
+import { applyApiError } from "@/lib/forms";
+import { loginSchema, type LoginValues } from "@/lib/validations/auth";
+import type { User } from "@/types/user";
+
+export function LoginForm() {
+  const router = useRouter();
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  async function onSubmit(values: LoginValues) {
+    try {
+      const { data } = await api.post<{ user: User }>("/auth/login", values);
+      toast.success(`Welcome back, ${data.user.name}.`);
+      router.replace(dashboardPath(data.user.role));
+      router.refresh();
+    } catch (error) {
+      applyApiError(error, setError, ["email", "password"]);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+      <FormError message={errors.root?.message} />
+
+      <FormField id="email" label="Email" error={errors.email?.message}>
+        <Input
+          id="email"
+          type="email"
+          autoComplete="email"
+          aria-invalid={!!errors.email}
+          aria-describedby={fieldDescriptionId("email")}
+          {...register("email")}
+        />
+      </FormField>
+
+      <FormField id="password" label="Password" error={errors.password?.message}>
+        <Input
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          aria-invalid={!!errors.password}
+          aria-describedby={fieldDescriptionId("password")}
+          {...register("password")}
+        />
+      </FormField>
+
+      <SubmitButton pending={isSubmitting} pendingLabel="Logging in…" className="w-full">
+        Log in
+      </SubmitButton>
+    </form>
+  );
+}
