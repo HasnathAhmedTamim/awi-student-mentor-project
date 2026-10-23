@@ -4,7 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import type { SubmissionDetail } from "@/types/submission";
 
-export function SubmissionDetails({ submission }: { submission: SubmissionDetail }) {
+type SubmissionDetailsProps = {
+  submission: SubmissionDetail;
+  showStudent?: boolean;
+  /** Replaces the "waiting for review" message while the submission is pending. */
+  pendingReview?: React.ReactNode;
+};
+
+export function SubmissionDetails({ submission, showStudent = false, pendingReview }: SubmissionDetailsProps) {
   return (
     <div className="space-y-6">
       <Card>
@@ -14,6 +21,15 @@ export function SubmissionDetails({ submission }: { submission: SubmissionDetail
         </CardHeader>
         <CardContent>
           <dl className="grid gap-4 text-sm sm:grid-cols-[10rem_1fr]">
+            {showStudent && (
+              <>
+                <dt className="text-muted-foreground">Student</dt>
+                <dd>
+                  {submission.student.name}
+                  <span className="block break-all text-muted-foreground">{submission.student.email}</span>
+                </dd>
+              </>
+            )}
             <dt className="text-muted-foreground">Repository</dt>
             <dd>
               <ExternalLink href={submission.repositoryUrl} />
@@ -36,7 +52,9 @@ export function SubmissionDetails({ submission }: { submission: SubmissionDetail
         </CardHeader>
         <CardContent className="text-sm">
           {submission.status === "PENDING" ? (
-            <p className="text-muted-foreground">Waiting for a mentor to review this project.</p>
+            (pendingReview ?? (
+              <p className="text-muted-foreground">Waiting for a mentor to review this project.</p>
+            ))
           ) : (
             <div className="space-y-3">
               <p className="text-muted-foreground">

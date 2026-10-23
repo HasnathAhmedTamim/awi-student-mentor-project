@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ExternalLink } from "@/components/shared/external-link";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
@@ -27,7 +28,12 @@ export function MentorSubmissionsTable({ submissions }: { submissions: MentorSub
           {submissions.map((submission) => (
             <TableRow key={submission.id}>
               <TableCell className="max-w-72 min-w-44 px-4 py-3 whitespace-normal">
-                <p className="font-medium">{submission.projectName}</p>
+                <Link
+                  href={`/mentor/submissions/${submission.id}`}
+                  className="font-medium underline-offset-4 hover:underline"
+                >
+                  {submission.projectName}
+                </Link>
                 <p className="text-xs text-muted-foreground sm:hidden">
                   by {submission.student.name}
                 </p>
