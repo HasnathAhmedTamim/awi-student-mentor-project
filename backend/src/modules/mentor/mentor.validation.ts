@@ -12,16 +12,21 @@ export type ListMentorSubmissionsQuery = z.infer<typeof listMentorSubmissionsQue
 
 const REVIEW_NOTE_MAX_LENGTH = 500;
 
-export const reviewSubmissionSchema = z.object({
-  status: z.enum([SubmissionStatus.APPROVED, SubmissionStatus.REJECTED], {
-    error: "Status must be APPROVED or REJECTED.",
-  }),
-  reviewNote: z
-    .string({ error: "Review note must be text." })
-    .trim()
-    .max(REVIEW_NOTE_MAX_LENGTH, `Review note must be at most ${REVIEW_NOTE_MAX_LENGTH} characters.`)
-    .transform((note) => note || null)
-    .optional(),
-});
+export const reviewSubmissionSchema = z
+  .object({
+    status: z.enum([SubmissionStatus.APPROVED, SubmissionStatus.REJECTED], {
+      error: "Status must be APPROVED or REJECTED.",
+    }),
+    reviewNote: z
+      .string({ error: "Review note must be text." })
+      .trim()
+      .max(REVIEW_NOTE_MAX_LENGTH, `Review note must be at most ${REVIEW_NOTE_MAX_LENGTH} characters.`)
+      .transform((note) => note || null)
+      .optional(),
+  })
+  .refine(({ status, reviewNote }) => status !== SubmissionStatus.REJECTED || reviewNote, {
+    path: ["reviewNote"],
+    message: "Explain why the submission is rejected.",
+  });
 
 export type ReviewSubmissionInput = z.infer<typeof reviewSubmissionSchema>;

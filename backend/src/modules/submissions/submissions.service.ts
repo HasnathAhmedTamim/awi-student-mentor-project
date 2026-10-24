@@ -27,9 +27,8 @@ export async function createSubmission(studentId: string, input: CreateSubmissio
     });
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      throw new AppError(409, "DUPLICATE_SUBMISSION", "You have already submitted this repository.", [
-        { field: "repositoryUrl", message: "You have already submitted this repository." },
-      ]);
+      const message = "This repository is already pending review or approved.";
+      throw new AppError(409, "DUPLICATE_SUBMISSION", message, [{ field: "repositoryUrl", message }]);
     }
     throw error;
   }

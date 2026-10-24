@@ -41,7 +41,8 @@ export async function createSubmission(
       studentId,
       projectName: overrides.projectName ?? "Test Project",
       repositoryUrl: `https://github.com/${repo}`,
-      repositoryUrlNormalized: `https://github.com/${repo}`.toLowerCase(),
+      repositoryUrlNormalized:
+        overrides.status === "REJECTED" ? null : `https://github.com/${repo}`.toLowerCase(),
       liveUrl: "https://example.com",
       description: "A project created for tests.",
       ...(overrides.createdAt && { createdAt: overrides.createdAt }),

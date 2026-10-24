@@ -38,7 +38,9 @@ model Submission {
   studentId               String           @db.Uuid
   projectName             String           @db.VarChar(120)
   repositoryUrl           String           @db.VarChar(300)
-  repositoryUrlNormalized String           @db.VarChar(300)
+  /// Lowercase repository URL, used only to block duplicates. Cleared when the
+  /// submission is rejected, so the student can submit the repository again.
+  repositoryUrlNormalized String?          @db.VarChar(300)
   liveUrl                 String           @db.VarChar(300)
   description             String           @db.VarChar(2000)
   status                  SubmissionStatus @default(PENDING)

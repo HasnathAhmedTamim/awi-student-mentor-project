@@ -92,15 +92,45 @@ describe("PATCH /api/mentor/submissions/:id/status reviews", () => {
     ["omitted", {}],
     ["empty", { reviewNote: "" }],
     ["whitespace only", { reviewNote: "   " }],
-  ])("rejects a submission with the review note %s stored as null", async (_label, note) => {
+  ])("approves a submission with the review note %s stored as null", async (_label, note) => {
+    const { mentor, submission } = await setup();
+
+    const res = await review(submission.id, authCookie(mentor), { status: "APPROVED", ...note });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.submission.status).toBe("APPROVED");
+    expect(res.body.data.submission.reviewNote).toBeNull();
+    expect((await findSubmission(submission.id)).reviewNote).toBeNull();
+  });
+
+  it.each([
+    ["omitted", {}],
+    ["empty", { reviewNote: "" }],
+    ["whitespace only", { reviewNote: "   " }],
+  ])("requires a review note to reject (note %s)", async (_label, note) => {
     const { mentor, submission } = await setup();
 
     const res = await review(submission.id, authCookie(mentor), { status: "REJECTED", ...note });
 
-    expect(res.status).toBe(200);
-    expect(res.body.data.submission.status).toBe("REJECTED");
-    expect(res.body.data.submission.reviewNote).toBeNull();
-    expect((await findSubmission(submission.id)).reviewNote).toBeNull();
+    expect(res.status).toBe(400);
+    expect(res.body.details).toEqual([
+      { field: "reviewNote", message: "Explain why the submission is rejected." },
+    ]);
+    expect((await findSubmission(submission.id)).status).toBe(SubmissionStatus.PENDING);
+  });
+
+  it("clears the duplicate key only when rejecting", async () => {
+    const { mentor, submission } = await setup();
+    const approved = await createSubmission(submission.studentId);
+    const cookie = authCookie(mentor);
+
+    await review(submission.id, cookie, { status: "REJECTED", reviewNote: "Add tests." });
+    await review(approved.id, cookie, { status: "APPROVED" });
+
+    expect((await findSubmission(submission.id)).repositoryUrlNormalized).toBeNull();
+    expect((await findSubmission(approved.id)).repositoryUrlNormalized).toBe(
+      approved.repositoryUrlNormalized,
+    );
   });
 
   it("ignores reviewer and ownership fields in the request body", async () => {
@@ -189,7 +219,7 @@ describe("PATCH /api/mentor/submissions/:id/status state transitions", () => {
 
     const responses = await Promise.all([
       review(submission.id, authCookie(approver), { status: "APPROVED" }),
-      review(submission.id, authCookie(rejecter), { status: "REJECTED" }),
+      review(submission.id, authCookie(rejecter), { status: "REJECTED", reviewNote: "Needs work." }),
     ]);
 
     expect(responses.map((res) => res.status).sort()).toEqual([200, 409]);

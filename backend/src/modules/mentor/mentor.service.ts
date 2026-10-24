@@ -45,6 +45,7 @@ export async function getStatistics() {
 /**
  * Moves a PENDING submission to APPROVED or REJECTED. The status check is part of
  * the UPDATE's WHERE clause, so of two concurrent reviews only one can succeed.
+ * Rejecting clears the duplicate key, so the student may submit the repository again.
  */
 export async function reviewSubmission(
   reviewerId: string,
@@ -55,7 +56,13 @@ export async function reviewSubmission(
   try {
     ({ count: updated } = await prisma.submission.updateMany({
       where: { id, status: SubmissionStatus.PENDING },
-      data: { status, reviewNote: reviewNote ?? null, reviewedById: reviewerId, reviewedAt: new Date() },
+      data: {
+        status,
+        reviewNote: reviewNote ?? null,
+        reviewedById: reviewerId,
+        reviewedAt: new Date(),
+        ...(status === SubmissionStatus.REJECTED && { repositoryUrlNormalized: null }),
+      },
     }));
   } catch (error) {
     // The token is still valid but the mentor's account has been deleted.

@@ -97,9 +97,58 @@ describe("POST /api/submissions", () => {
     expect(res.status).toBe(409);
     expect(res.body).toMatchObject({ code: "DUPLICATE_SUBMISSION" });
     expect(res.body.details).toEqual([
-      { field: "repositoryUrl", message: "You have already submitted this repository." },
+      { field: "repositoryUrl", message: "This repository is already pending review or approved." },
     ]);
     expect(await prisma.submission.count()).toBe(1);
+  });
+
+  it("rejects a repository that is already approved", async () => {
+    const student = await createUser();
+    await createSubmission(student.id, { repo: "Rahim/Portfolio", status: SubmissionStatus.APPROVED });
+
+    const res = await request(app)
+      .post("/api/submissions")
+      .set("Cookie", authCookie(student))
+      .send(validSubmission);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("DUPLICATE_SUBMISSION");
+  });
+
+  it("lets a student resubmit a repository after it was rejected, keeping the rejected one", async () => {
+    const student = await createUser();
+    const rejected = await createSubmission(student.id, {
+      repo: "Rahim/Portfolio",
+      status: SubmissionStatus.REJECTED,
+    });
+
+    const res = await request(app)
+      .post("/api/submissions")
+      .set("Cookie", authCookie(student))
+      .send(validSubmission);
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.submission.status).toBe("PENDING");
+    expect(res.body.data.submission.id).not.toBe(rejected.id);
+    expect((await prisma.submission.findUniqueOrThrow({ where: { id: rejected.id } })).status).toBe(
+      SubmissionStatus.REJECTED,
+    );
+    expect(await prisma.submission.count()).toBe(2);
+  });
+
+  it("allows only one of two concurrent resubmissions after a rejection", async () => {
+    const student = await createUser();
+    const cookie = authCookie(student);
+    await createSubmission(student.id, { repo: "Rahim/Portfolio", status: SubmissionStatus.REJECTED });
+
+    const responses = await Promise.all(
+      [1, 2].map(() =>
+        request(app).post("/api/submissions").set("Cookie", cookie).send(validSubmission),
+      ),
+    );
+
+    expect(responses.map((res) => res.status).sort()).toEqual([201, 409]);
+    expect(await prisma.submission.count({ where: { status: SubmissionStatus.PENDING } })).toBe(1);
   });
 
   it("allows only one of two concurrent duplicate submissions", async () => {
