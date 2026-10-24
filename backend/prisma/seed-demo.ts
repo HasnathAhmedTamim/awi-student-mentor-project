@@ -13,7 +13,6 @@ const seedEnvSchema = z.object({
   SEED_ALLOW_NEON_DEMO: z.enum(["true"]).optional(),
 });
 
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 const DEMO_STUDENTS = [
   { name: "Demo Queue Student", email: "demo-queue-student@example.test" },
   { name: "Demo Reviewed Student", email: "demo-reviewed-student@example.test" },
@@ -91,16 +90,14 @@ async function main() {
   const seedEnv = seedEnvSchema.parse(process.env);
   const databaseUrl = new URL(seedEnv.DATABASE_URL);
   const databaseName = databaseUrl.pathname.slice(1);
-  const isLocalDemoDatabase =
-    LOCAL_HOSTS.has(databaseUrl.hostname) && databaseName === "awi_dev";
   const isOptedInNeonDemoDatabase =
     seedEnv.SEED_ALLOW_NEON_DEMO === "true" &&
     databaseUrl.hostname.endsWith(".neon.tech") &&
     databaseName === "neondb";
 
-  if (!isLocalDemoDatabase && !isOptedInNeonDemoDatabase) {
+  if (!isOptedInNeonDemoDatabase) {
     throw new Error(
-      "Demo seeding is restricted to local awi_dev. Neon requires SEED_ALLOW_NEON_DEMO=true, a *.neon.tech host, and database neondb.",
+      "Demo seeding requires SEED_ALLOW_NEON_DEMO=true, a *.neon.tech host, and database neondb. Use a disposable Neon development branch.",
     );
   }
 
@@ -191,7 +188,7 @@ async function main() {
   }
 
   console.log(
-    `Verified mentor and 2 demo students in ${isLocalDemoDatabase ? "local awi_dev" : "Neon neondb"}; created ${createdSubmissions} missing demo submissions and preserved existing records.`,
+    `Verified mentor and 2 demo students in Neon neondb; created ${createdSubmissions} missing demo submissions and preserved existing records.`,
   );
   if (generatedStudentPassword) {
     console.log(`New demo student login password: ${generatedStudentPassword}`);

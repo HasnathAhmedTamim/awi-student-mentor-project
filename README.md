@@ -49,7 +49,7 @@ There are two supported roles, `STUDENT` and `MENTOR`. There is no Admin role or
 | Frontend | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, React Hook Form, Zod |
 | Backend | Node.js 22+, Express 5, TypeScript, Zod, JSON Web Tokens, bcryptjs, Helmet, express-rate-limit |
 | Data | PostgreSQL, Prisma 7 |
-| Backend tests | Vitest and Supertest with a separate local PostgreSQL test database |
+| Backend tests | Vitest and Supertest with an isolated, disposable test database |
 
 ## Repository structure
 
@@ -81,25 +81,10 @@ For component- and package-specific guidance, see [`backend/README.md`](backend/
 ### Prerequisites
 
 - Node.js 22 or newer and npm.
-- PostgreSQL for application data (local PostgreSQL or a hosted provider such as Neon).
-- A separate local PostgreSQL database for backend tests. Tests apply migrations and clear data in that test database; never use a database containing data you need to keep.
+- A PostgreSQL database for application data. This guide uses Neon; the backend can run locally while connecting to Neon.
+- A separate disposable test database only if running backend integration tests. The current test harness requires a local PostgreSQL host and clears test data.
 
 ### 1. Configure and start the backend
-
-For a fully local setup, create a PostgreSQL database named `awi_dev` first. The optional demo seed is intentionally restricted to that exact local database name:
-
-```powershell
-createdb awi_dev
-```
-
-If `createdb` is unavailable, create a database named `awi_dev` in pgAdmin or another PostgreSQL administration tool. In `backend/.env`, set both `DATABASE_URL` and `DIRECT_URL` to that database, for example:
-
-```env
-DATABASE_URL="postgresql://postgres:your-password@localhost:5432/awi_dev?schema=public"
-DIRECT_URL="postgresql://postgres:your-password@localhost:5432/awi_dev?schema=public"
-```
-
-Replace the username and password with your local PostgreSQL credentials. If your password contains URL-reserved characters, URL-encode them in the connection string.
 
 From the repository root, open a terminal:
 
@@ -111,7 +96,7 @@ npm install
 
 On macOS/Linux, use `cp .env.example .env` instead of `Copy-Item`.
 
-Edit `backend/.env` and set the PostgreSQL connection strings, a strong `JWT_SECRET` (at least 32 characters), and the mentor account values in `SEED_MENTOR_*`. See [`backend/README.md`](backend/README.md) for every supported variable and Neon connection details.
+Create or select a dedicated development branch in Neon, then copy its pooled connection string and direct connection string from the Neon dashboard. In `backend/.env`, set `DATABASE_URL` to the pooled URL, `DIRECT_URL` to the direct URL, a strong `JWT_SECRET` (at least 32 characters), and the mentor account values in `SEED_MENTOR_*`. Verify both URLs target the intended development branch before running migrations or seeds. Keep `.env` private. See [`backend/README.md`](backend/README.md) for every supported variable.
 
 Create the database tables and initial mentor, then start the API:
 
@@ -121,7 +106,7 @@ npm run db:seed
 npm run dev
 ```
 
-The API listens at `http://localhost:5000` by default. Keep this terminal running.
+The API listens at `http://localhost:5000` by default and connects to Neon through `DATABASE_URL`. Keep this terminal running.
 
 ### 2. Configure and start the frontend
 
@@ -144,7 +129,7 @@ Open [http://localhost:3000](http://localhost:3000), sign up as a student, or lo
 
 The demo seed adds two demo students and 14 submissions (12 pending, one approved, and one rejected). Set `SEED_DEMO_STUDENT_PASSWORD` in `backend/.env` to choose a password for newly created demo student accounts. If omitted, the script generates a password and prints it once when it creates new accounts.
 
-After creating `awi_dev` and configuring `DATABASE_URL` to connect to it, run `npm run db:seed:demo` from `backend/`. The script checks both the local host and exact database name; another local database name will be rejected. Existing demo accounts, passwords, submissions, and review decisions are preserved. Do not run demo seeding against production or a database containing data you need to keep. Neon requires an explicit opt-in and is not recommended for recruiter demo data; safeguards are documented in [`backend/README.md`](backend/README.md).
+Demo seeding writes to the Neon database configured by `DATABASE_URL`. Target a disposable development branch, set `SEED_ALLOW_NEON_DEMO=true`, and use the supported `neondb` database name. The seed preserves existing demo accounts, passwords, submissions, and review decisions, but creates missing records; do not run it against production or data you need to keep. See [`backend/README.md`](backend/README.md) for the guard details.
 
 ## Validation
 
@@ -155,7 +140,7 @@ Run these commands from the corresponding application directory:
 | Backend | `npm run typecheck` | TypeScript check |
 | Backend | `npm run lint` | ESLint |
 | Backend | `npx prisma validate` | Validate Prisma schema |
-| Backend | `npm test` | Run backend tests against the configured local test database |
+| Backend | `npm test` | Run backend tests against the isolated local test database |
 | Backend | `npm run build` | Compile the API to `dist/` |
 | Frontend | `npm run typecheck` | Generate route types and check TypeScript |
 | Frontend | `npm run lint` | ESLint |
@@ -167,6 +152,7 @@ Backend test setup and database safety requirements are in [`backend/README.md`]
 
 - [Architecture](docs/ARCHITECTURE.md) — application boundaries, request flow, and data model.
 - [API reference](docs/API.md) — endpoints, access rules, validation, and response formats.
+- [Postman collection](postman/Student-Mentor-Dashboard.postman_collection.json) — standalone API requests and tests; configure the local backend to use a Neon development branch.
 - [Decision records](docs/DECISIONS.md) — implementation decisions and trade-offs.
 - [Backend guide](backend/README.md) — backend configuration, database, seeds, and scripts.
 - [Frontend guide](frontend/README.md) — routes, UI structure, configuration, and scripts.

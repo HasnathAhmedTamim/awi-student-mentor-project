@@ -4,6 +4,10 @@ The Express API lives in `backend/`. In development it listens on `http://localh
 
 All paths below start with `/api`.
 
+## Postman workflow
+
+Import [`Student-Mentor-Dashboard.postman_collection.json`](../postman/Student-Mentor-Dashboard.postman_collection.json) as a standalone collection. Configure its collection variables, run the backend locally with `DATABASE_URL` pointed at a dedicated Neon development branch, and never run its write requests against production data.
+
 ## Conventions
 
 ### Requests

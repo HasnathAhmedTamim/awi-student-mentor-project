@@ -17,9 +17,9 @@ The frontend does not access the database. See [`../docs/ARCHITECTURE.md`](../do
 ## Requirements
 
 - Node.js 22 or newer and npm.
-- PostgreSQL.
+- A PostgreSQL database. The recommended application database for this project is Neon.
 
-## Local setup
+## Run the backend locally with Neon
 
 From the repository root:
 
@@ -31,27 +31,14 @@ npm install
 
 On macOS/Linux, use `cp .env.example .env` instead of `Copy-Item`.
 
-For the recommended recruiter setup, create a local PostgreSQL database named `awi_dev`:
-
-```powershell
-createdb awi_dev
-```
-
-If `createdb` is unavailable, create `awi_dev` in pgAdmin or another PostgreSQL administration tool. Set `DATABASE_URL` and `DIRECT_URL` in `.env` to this local database, for example:
-
-```env
-DATABASE_URL="postgresql://postgres:your-password@localhost:5432/awi_dev?schema=public"
-DIRECT_URL="postgresql://postgres:your-password@localhost:5432/awi_dev?schema=public"
-```
-
-Replace the example credentials with your local PostgreSQL username and password. URL-encode reserved characters in the password. The demo seed specifically requires the database name `awi_dev` and a local host; a different local database name is not accepted. The normal API and mentor seed can use another configured PostgreSQL database.
+Create or select a dedicated development branch in Neon. Copy its pooled connection string for `DATABASE_URL` and its direct connection string for `DIRECT_URL`. The backend process may run locally; migrations, seeds, and API data operations then use the configured Neon database. Verify both URLs target the intended development branch before running any write operation.
 
 Edit `.env` before starting the server:
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | Yes | PostgreSQL URL used by the application. For Neon, use the pooled URL. |
-| `DIRECT_URL` | For migrations | Direct PostgreSQL URL used by Prisma migrations. For a local database, it may match `DATABASE_URL`. |
+| `DATABASE_URL` | Yes | Neon pooled PostgreSQL URL used by the application and seed scripts. |
+| `DIRECT_URL` | For migrations | Neon direct PostgreSQL URL used by Prisma migrations. |
 | `JWT_SECRET` | Yes | Signing secret of at least 32 characters. |
 | `SEED_MENTOR_EMAIL` | For seeding | Email address for the mentor account. |
 | `SEED_MENTOR_PASSWORD` | For seeding | Initial mentor password; must be at least 8 characters. |
@@ -69,7 +56,7 @@ Generate a suitable JWT secret with Node.js:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-For Neon, configure `DATABASE_URL` with the pooled connection URL and `DIRECT_URL` with the direct connection URL. Keep credentials private and do not commit `.env`.
+Configure `DATABASE_URL` with the Neon pooled connection URL and `DIRECT_URL` with the direct connection URL. Keep credentials private and do not commit `.env`.
 
 Create the schema and seed the mentor configured by `SEED_MENTOR_*`:
 
@@ -84,7 +71,7 @@ Then start the API:
 npm run dev
 ```
 
-The API is available at `http://localhost:5000` by default. The Next.js frontend forwards browser `/api/*` requests to this server; set `CLIENT_ORIGIN` to the frontend origin if it differs from the default.
+The API is available at `http://localhost:5000` by default and uses Neon via the configured database URLs. Running the API locally does not mean it uses a local database. The Next.js frontend forwards browser `/api/*` requests to this server; set `CLIENT_ORIGIN` to the frontend origin if it differs from the default.
 
 ## Demo data
 
@@ -96,11 +83,11 @@ npm run db:seed:demo
 
 The seed creates or verifies the configured mentor, two demo student accounts, and 14 sample submissions (12 pending, one approved, one rejected). It preserves existing demo accounts and submissions; it does not reset existing passwords or overwrite review decisions. Without `SEED_DEMO_STUDENT_PASSWORD`, a generated password is printed once when new demo students are created.
 
-By default, demo seeding is allowed only for a local PostgreSQL database named `awi_dev`; it checks the host and database name before writing. Neon seeding is blocked unless `SEED_ALLOW_NEON_DEMO=true` is explicitly set, and then only a `*.neon.tech` host with a database named `neondb` is accepted. The Neon opt-in is intended only for deliberate testing, not recruiter setup. Avoid seeding valuable or production data.
+Demo seeding writes to the Neon database in `DATABASE_URL` and requires `SEED_ALLOW_NEON_DEMO=true`, a `*.neon.tech` host, and database name `neondb`. Set this opt-in only when the URL points to a disposable Neon development branch. The seed preserves existing records but creates users and submissions; never run it against production or data you need to keep.
 
 ## Tests
 
-Backend tests require a separate **local** PostgreSQL database named `awi_test`. Copy `.env.test.example` to `.env.test` and configure local test database credentials. The test setup applies migrations and truncates tables in that database, and rejects non-local database hosts. Never point `.env.test` to Neon or a database containing data you need to keep.
+The API, migration, and seed workflows use Neon. Integration tests are the exception: they require a separate local PostgreSQL database named `awi_test` because the test setup applies migrations and truncates its tables, and intentionally rejects non-local database hosts. This local database is test-only, not an application runtime requirement. Copy `.env.test.example` to `.env.test`; never point it at Neon or any database containing data you need to keep.
 
 ```bash
 createdb awi_test
