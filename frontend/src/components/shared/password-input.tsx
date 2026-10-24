@@ -12,19 +12,18 @@ export function PasswordInput({ className, ...props }: Omit<React.ComponentProps
 
   return (
     <div className="relative">
-      <Input {...props} type={visible ? "text" : "password"} className={cn("pr-16", className)} />
+      <Input {...props} type={visible ? "text" : "password"} className={cn("pr-10", className)} />
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className="absolute top-1/2 right-1 h-7 -translate-y-1/2 gap-1 px-2 text-xs text-muted-foreground"
+        size="icon-sm"
+        className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground"
         onClick={() => setVisible((value) => !value)}
         aria-label={visible ? "Hide password" : "Show password"}
         aria-pressed={visible}
         disabled={props.disabled}
       >
         {visible ? <EyeOffIcon aria-hidden="true" /> : <EyeIcon aria-hidden="true" />}
-        {visible ? "Hide" : "Show"}
       </Button>
     </div>
   );
