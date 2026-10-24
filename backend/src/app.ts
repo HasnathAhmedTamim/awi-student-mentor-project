@@ -21,6 +21,14 @@ export function createApp() {
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
 
+  app.get("/", (_req, res) => {
+    sendSuccess(res, {
+      service: "Student Project Submission & Mentor Review API",
+      message: "API is running.",
+      healthCheck: "/api/health",
+    });
+  });
+
   app.get("/api/health", (_req, res) => {
     sendSuccess(res, { status: "ok" });
   });

@@ -5,6 +5,20 @@ import { createApp } from "../src/app.js";
 const app = createApp();
 
 describe("app foundation", () => {
+  it("describes the API at the root route", async () => {
+    const res = await request(app).get("/");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      data: {
+        service: "Student Project Submission & Mentor Review API",
+        message: "API is running.",
+        healthCheck: "/api/health",
+      },
+    });
+  });
+
   it("responds to the health check", async () => {
     const res = await request(app).get("/api/health");
 
