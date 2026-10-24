@@ -79,6 +79,21 @@ For component- and package-specific guidance, see [`backend/README.md`](backend/
 
 ### 1. Configure and start the backend
 
+For a fully local setup, create a PostgreSQL database named `awi_dev` first. The optional demo seed is intentionally restricted to that exact local database name:
+
+```powershell
+createdb awi_dev
+```
+
+If `createdb` is unavailable, create a database named `awi_dev` in pgAdmin or another PostgreSQL administration tool. In `backend/.env`, set both `DATABASE_URL` and `DIRECT_URL` to that database, for example:
+
+```env
+DATABASE_URL="postgresql://postgres:your-password@localhost:5432/awi_dev?schema=public"
+DIRECT_URL="postgresql://postgres:your-password@localhost:5432/awi_dev?schema=public"
+```
+
+Replace the username and password with your local PostgreSQL credentials. If your password contains URL-reserved characters, URL-encode them in the connection string.
+
 From the repository root, open a terminal:
 
 ```powershell
@@ -122,7 +137,7 @@ Open [http://localhost:3000](http://localhost:3000), sign up as a student, or lo
 
 The demo seed adds two demo students and 14 submissions (12 pending, one approved, and one rejected). Set `SEED_DEMO_STUDENT_PASSWORD` in `backend/.env` to choose a password for newly created demo student accounts. If omitted, the script generates a password and prints it once when it creates new accounts.
 
-Run `npm run db:seed:demo` from `backend/`. The script is restricted to a local PostgreSQL database named `awi_dev` by default. Existing demo accounts, passwords, submissions, and review decisions are preserved. Do not point this at a production database. Neon requires an explicit opt-in; details and safeguards are documented in [`backend/README.md`](backend/README.md).
+After creating `awi_dev` and configuring `DATABASE_URL` to connect to it, run `npm run db:seed:demo` from `backend/`. The script checks both the local host and exact database name; another local database name will be rejected. Existing demo accounts, passwords, submissions, and review decisions are preserved. Do not run demo seeding against production or a database containing data you need to keep. Neon requires an explicit opt-in and is not recommended for recruiter demo data; safeguards are documented in [`backend/README.md`](backend/README.md).
 
 ## Validation
 

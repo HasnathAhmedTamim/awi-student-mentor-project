@@ -31,6 +31,21 @@ npm install
 
 On macOS/Linux, use `cp .env.example .env` instead of `Copy-Item`.
 
+For the recommended recruiter setup, create a local PostgreSQL database named `awi_dev`:
+
+```powershell
+createdb awi_dev
+```
+
+If `createdb` is unavailable, create `awi_dev` in pgAdmin or another PostgreSQL administration tool. Set `DATABASE_URL` and `DIRECT_URL` in `.env` to this local database, for example:
+
+```env
+DATABASE_URL="postgresql://postgres:your-password@localhost:5432/awi_dev?schema=public"
+DIRECT_URL="postgresql://postgres:your-password@localhost:5432/awi_dev?schema=public"
+```
+
+Replace the example credentials with your local PostgreSQL username and password. URL-encode reserved characters in the password. The demo seed specifically requires the database name `awi_dev` and a local host; a different local database name is not accepted. The normal API and mentor seed can use another configured PostgreSQL database.
+
 Edit `.env` before starting the server:
 
 | Variable | Required | Purpose |
@@ -81,7 +96,7 @@ npm run db:seed:demo
 
 The seed creates or verifies the configured mentor, two demo student accounts, and 14 sample submissions (12 pending, one approved, one rejected). It preserves existing demo accounts and submissions; it does not reset existing passwords or overwrite review decisions. Without `SEED_DEMO_STUDENT_PASSWORD`, a generated password is printed once when new demo students are created.
 
-By default, demo seeding is allowed only for a local PostgreSQL database named `awi_dev`. Neon seeding is blocked unless `SEED_ALLOW_NEON_DEMO=true` is explicitly set, and then only a `*.neon.tech` host with a database named `neondb` is accepted. Avoid seeding valuable or production data.
+By default, demo seeding is allowed only for a local PostgreSQL database named `awi_dev`; it checks the host and database name before writing. Neon seeding is blocked unless `SEED_ALLOW_NEON_DEMO=true` is explicitly set, and then only a `*.neon.tech` host with a database named `neondb` is accepted. The Neon opt-in is intended only for deliberate testing, not recruiter setup. Avoid seeding valuable or production data.
 
 ## Tests
 
