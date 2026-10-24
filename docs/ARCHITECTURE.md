@@ -90,7 +90,7 @@ erDiagram
     uuid studentId FK
     varchar projectName
     varchar repositoryUrl
-    varchar repositoryUrlNormalized
+    varchar repositoryUrlNormalized "nullable"
     varchar liveUrl
     varchar description
     SubmissionStatus status "PENDING | APPROVED | REJECTED"
@@ -103,7 +103,7 @@ erDiagram
 ```
 
 - **Two relations between the same tables.** A user has many submissions as a student (`studentId`) and many as a reviewer (`reviewedById`). Prisma names them `StudentSubmissions` and `ReviewerSubmissions`.
-- **Duplicate prevention** is a unique constraint on `(studentId, repositoryUrlNormalized)`. `repositoryUrlNormalized` is the lowercase canonical URL and is never returned by the API. Because the database enforces it, two simultaneous submissions of the same repository cannot both succeed; the second one becomes a `409`.
+- **Duplicate prevention** is a unique constraint on `(studentId, repositoryUrlNormalized)`. `repositoryUrlNormalized` is the lowercase canonical URL and is never returned by the API. Because the database enforces it, two simultaneous submissions of the same repository cannot both succeed; the second one becomes a `409`. Rejecting a submission sets its `repositoryUrlNormalized` to `null` (`NULL`s never collide in a unique constraint), so the student can submit that repository again while the rejected submission stays as history.
 - **Indexes:** `(status, createdAt)` serves the mentor list and filter; `(studentId, createdAt)` serves "my submissions".
 - **Deletes:** deleting a student deletes their submissions; deleting a mentor keeps the submissions and sets `reviewedById` to `null`.
 - **Column limits** match the validation limits, so the database rejects anything the validation might miss.
@@ -200,10 +200,10 @@ Authentication answers "who are you?" (`401` if unknown); authorization answers 
 
 ### Mentor review
 
-1. The mentor opens a submission from the (optionally filtered) dashboard, optionally writes a note and chooses Approve or Reject.
+1. The mentor opens a submission from the (optionally filtered) dashboard, writes a note (required to reject, optional to approve) and chooses Approve or Reject.
 2. A confirmation dialog names the project and states that reviews are final.
-3. `PATCH /api/mentor/submissions/:id/status` → `authenticate` → `authorizeRoles(MENTOR)` → `validateRequest` (UUID id; status `APPROVED`/`REJECTED`; note ≤ 500 characters).
-4. The service runs a single `UPDATE … WHERE id = :id AND status = 'PENDING'`, setting the status, note, `reviewedById` (from the token) and `reviewedAt` (server time).
+3. `PATCH /api/mentor/submissions/:id/status` → `authenticate` → `authorizeRoles(MENTOR)` → `validateRequest` (UUID id; status `APPROVED`/`REJECTED`; note ≤ 500 characters, required for `REJECTED`).
+4. The service runs a single `UPDATE … WHERE id = :id AND status = 'PENDING'`, setting the status, note, `reviewedById` (from the token) and `reviewedAt` (server time). A rejection also clears `repositoryUrlNormalized`, so the student can submit the repository again.
 5. It then reads the submission: missing → `404`; the update changed nothing → `409 SUBMISSION_ALREADY_REVIEWED`; otherwise `200` with the updated submission.
 6. The page refreshes. After a `401`, `404` or `409` it also refreshes, so the mentor sees the real state instead of a stale form.
 

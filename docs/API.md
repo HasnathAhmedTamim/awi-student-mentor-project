@@ -79,7 +79,7 @@ Paginated lists add `meta`:
 | 404 | `SUBMISSION_NOT_FOUND` | No such submission, or it belongs to another student. |
 | 404 | `ROUTE_NOT_FOUND` | Unknown endpoint. |
 | 409 | `EMAIL_TAKEN` | Signup with an email that already has an account. |
-| 409 | `DUPLICATE_SUBMISSION` | The student already submitted this repository. |
+| 409 | `DUPLICATE_SUBMISSION` | The student's submission of this repository is already pending or approved. |
 | 409 | `SUBMISSION_ALREADY_REVIEWED` | The submission is no longer pending. |
 | 413 | `PAYLOAD_TOO_LARGE` | Body larger than 100 kB. |
 | 429 | `RATE_LIMITED` | Too many requests (see [Rate limits](#rate-limits)). |
@@ -228,7 +228,7 @@ Errors: `401 UNAUTHENTICATED` / `TOKEN_EXPIRED` / `INVALID_TOKEN`.
 
 `201` → `{ "submission": Submission }`, with `repositoryUrl` stored as `https://github.com/Nadia-Islam/Weather-Station`.
 
-A student cannot submit the same repository twice. Owner and repository names are compared case-insensitively, so `https://github.com/nadia-islam/weather-station/` counts as the same repository.
+A student cannot submit a repository that is already pending review or approved for them. Owner and repository names are compared case-insensitively, so `https://github.com/nadia-islam/weather-station/` counts as the same repository. A rejected repository can be submitted again; this creates a new `PENDING` submission and keeps the rejected one.
 
 Errors: `400 VALIDATION_ERROR`, `401`, `403 FORBIDDEN` (mentors), `409 DUPLICATE_SUBMISSION` (with a `details` entry for `repositoryUrl`), `429 RATE_LIMITED`.
 
@@ -301,7 +301,7 @@ Approves or rejects a **pending** submission. Reviews are final.
 | Field | Rules |
 | --- | --- |
 | `status` | `APPROVED` or `REJECTED`. |
-| `reviewNote` | Optional text shown to the student. Trimmed; at most 500 characters after trimming; an empty note is stored as `null`. |
+| `reviewNote` | Text shown to the student. Optional when approving, **required when rejecting**. Trimmed; at most 500 characters after trimming; an empty note is stored as `null` (and is therefore rejected for `REJECTED`). |
 
 ```json
 { "status": "APPROVED", "reviewNote": "Clean layout and clear README." }
@@ -315,7 +315,7 @@ Errors:
 
 | Status | Code | When |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | Malformed id, a status other than `APPROVED`/`REJECTED`, or a note that is not text or too long. |
+| 400 | `VALIDATION_ERROR` | Malformed id, a status other than `APPROVED`/`REJECTED`, a note that is not text or too long, or `REJECTED` without a note. |
 | 401 | `UNAUTHENTICATED` / `TOKEN_EXPIRED` / `INVALID_TOKEN` | Not logged in, or the mentor's account no longer exists. |
 | 403 | `FORBIDDEN` | The user is a student. |
 | 404 | `SUBMISSION_NOT_FOUND` | No submission with this id. |

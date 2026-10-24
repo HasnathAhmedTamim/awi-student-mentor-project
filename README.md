@@ -3,7 +3,7 @@
 A full-stack dashboard where students submit their projects and mentors review, approve or reject them.
 
 - **Students** sign up, submit projects (name, GitHub repository, live URL, description) and follow each submission's status and the mentor's feedback.
-- **Mentors** see statistics for all submissions, filter and page through them on the server, and approve or reject pending ones with an optional note.
+- **Mentors** see statistics for all submissions, filter and page through them on the server, and approve or reject pending ones with a note (required when rejecting). A student can submit a rejected project again.
 
 Access is protected with JWT authentication in an HttpOnly cookie and role-based access control (`STUDENT`, `MENTOR`) enforced by the API.
 
@@ -98,7 +98,7 @@ Open http://localhost:3000.
 1. Open http://localhost:3000 and choose **Sign up as a student**. You are logged in and taken to your dashboard.
 2. Choose **New submission** and submit a project, for example repository `https://github.com/your-name/your-project` and live URL `https://your-project.vercel.app`.
 3. The project appears on your dashboard as **Pending**.
-4. Submit the same repository again (try `https://github.com/YOUR-NAME/your-project.git`): the form shows "You have already submitted this repository."
+4. Submit the same repository again (try `https://github.com/YOUR-NAME/your-project.git`): the form shows "This repository is already pending review or approved."
 5. Log out.
 
 **Mentor**
@@ -106,8 +106,8 @@ Open http://localhost:3000.
 1. Log in with the `SEED_MENTOR_EMAIL` and `SEED_MENTOR_PASSWORD` from `backend/.env`.
 2. The dashboard shows statistics (total, pending, approved, rejected) and a paginated table of all submissions.
 3. Filter by **Pending** and open the student's project.
-4. Optionally write a review note, choose **Approve** or **Reject**, and confirm. The statistics and table update.
-5. Log out, log in as the student again and open the project: the status and the mentor's note are shown.
+4. Write a review note (required to reject, optional to approve), choose **Approve** or **Reject**, and confirm. The statistics and table update.
+5. Log out, log in as the student again and open the project: the status and the mentor's note are shown. If it was rejected, **Submit again** opens the form, and the same repository is accepted as a new pending submission.
 
 **Security checks with an API client** (Postman, curl): log in as the student, then call `GET /api/mentor/statistics` or `PATCH /api/mentor/submissions/<id>/status` → `403 FORBIDDEN`. Without a cookie → `401 UNAUTHENTICATED`. See [`docs/API.md`](docs/API.md).
 
@@ -124,7 +124,7 @@ cp .env.test.example .env.test     # set your local postgres password
 npm test                           # applies the migrations to awi_test, then runs Vitest
 ```
 
-They cover signup and login, token handling (missing, malformed, wrong secret, unsigned, expired), role checks on every protected endpoint, submission validation and duplicates, ownership, pagination and filtering, statistics, approval and rejection, repeated and concurrent reviews, and rate limiting.
+They cover signup and login, token handling (missing, malformed, wrong secret, unsigned, expired), role checks on every protected endpoint, submission validation and duplicates, resubmission after rejection, ownership, pagination and filtering, statistics, approval and rejection (with the required note), repeated and concurrent reviews, and rate limiting.
 
 ### All checks
 
