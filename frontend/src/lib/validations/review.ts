@@ -2,6 +2,7 @@ import { z } from "zod";
 
 // Mirrors reviewSubmissionSchema in backend/src/modules/mentor/mentor.validation.ts.
 export const REVIEW_NOTE_MAX_LENGTH = 500;
+export const REJECTION_NOTE_REQUIRED = "Explain why the submission is rejected.";
 
 export const reviewSchema = z.object({
   reviewNote: z

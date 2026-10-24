@@ -1,4 +1,4 @@
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, RotateCcwIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageContainer } from "@/components/shared/page-container";
@@ -26,6 +26,14 @@ export default async function StudentSubmissionPage({
         </Link>
       </Button>
       <SubmissionDetails submission={submission} />
+      {submission.status === "REJECTED" && (
+        <Button asChild>
+          <Link href="/student/submissions/new">
+            <RotateCcwIcon aria-hidden="true" />
+            Submit again
+          </Link>
+        </Button>
+      )}
     </PageContainer>
   );
 }

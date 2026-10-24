@@ -27,7 +27,7 @@ export default async function NewSubmissionPage() {
             <h1>Submit a project</h1>
           </CardTitle>
           <CardDescription>
-            A mentor will review it. You can submit each repository only once.
+            A mentor will review it. You can submit a repository again only if it was rejected.
           </CardDescription>
         </CardHeader>
         <CardContent>

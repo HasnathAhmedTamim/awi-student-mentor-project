@@ -14,7 +14,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api/api-error";
 import { api } from "@/lib/api/client";
 import { applyApiError } from "@/lib/forms";
-import { REVIEW_NOTE_MAX_LENGTH, reviewSchema, type ReviewValues } from "@/lib/validations/review";
+import {
+  REJECTION_NOTE_REQUIRED,
+  REVIEW_NOTE_MAX_LENGTH,
+  reviewSchema,
+  type ReviewValues,
+} from "@/lib/validations/review";
 import type { SubmissionDetail } from "@/types/submission";
 
 type Decision = { status: "APPROVED" | "REJECTED"; reviewNote: string };
@@ -39,6 +44,10 @@ export function ReviewActions({ submission }: { submission: Pick<SubmissionDetai
 
   const choose = (status: Decision["status"]) =>
     handleSubmit(({ reviewNote }) => {
+      if (status === "REJECTED" && !reviewNote) {
+        setError("reviewNote", { message: REJECTION_NOTE_REQUIRED }, { shouldFocus: true });
+        return;
+      }
       setDecision({ status, reviewNote });
       setDialogOpen(true);
     });
@@ -74,9 +83,9 @@ export function ReviewActions({ submission }: { submission: Pick<SubmissionDetai
 
       <FormField
         id="reviewNote"
-        label="Review note (optional)"
+        label="Review note"
         error={errors.reviewNote?.message}
-        hint={`Shown to the student. Up to ${REVIEW_NOTE_MAX_LENGTH} characters.`}
+        hint={`Shown to the student. Required when rejecting. Up to ${REVIEW_NOTE_MAX_LENGTH} characters.`}
       >
         <Textarea
           id="reviewNote"
