@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppLink } from "@/components/shared/app-link";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ export default function MentorNotFound() {
         description="This page or submission does not exist."
         action={
           <Button asChild variant="outline">
-            <Link href="/mentor/dashboard">Back to dashboard</Link>
+            <AppLink href="/mentor/dashboard">Back to dashboard</AppLink>
           </Button>
         }
       />

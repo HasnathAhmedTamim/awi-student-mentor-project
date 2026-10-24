@@ -3,7 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import type { SubmissionStatus } from "@/types/submission";
 
 const STATUS_CONFIG = {
-  PENDING: { label: "Pending", icon: ClockIcon, variant: "outline", className: "" },
+  PENDING: {
+    label: "Pending",
+    icon: ClockIcon,
+    variant: "outline",
+    className: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300",
+  },
   APPROVED: {
     label: "Approved",
     icon: CircleCheckIcon,

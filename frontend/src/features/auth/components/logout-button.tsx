@@ -26,7 +26,7 @@ export function LogoutButton() {
   return (
     <Button variant="ghost" size="sm" onClick={handleLogout} disabled={pending}>
       <LogOutIcon aria-hidden="true" />
-      {pending ? "Logging out…" : "Log out"}
+      <span>{pending ? "Logging out…" : "Log out"}</span>
     </Button>
   );
 }

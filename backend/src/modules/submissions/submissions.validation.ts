@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { paginationQuerySchema } from "../../utils/pagination.js";
+import { searchParamSchema } from "../../utils/search.js";
 import { toCanonicalGithubUrl } from "./github-url.js";
 
 const URL_MAX_LENGTH = 300;
@@ -49,4 +50,6 @@ export const submissionIdParamsSchema = z.object({
   id: z.uuid("Submission id is not valid."),
 });
 
-export const listMySubmissionsQuerySchema = paginationQuerySchema;
+export const listMySubmissionsQuerySchema = paginationQuerySchema.extend({ q: searchParamSchema });
+
+export type ListMySubmissionsQuery = z.infer<typeof listMySubmissionsQuerySchema>;

@@ -1,10 +1,11 @@
 import type { SubmissionStatus } from "@/types/submission";
 
-export type DashboardView = { status?: SubmissionStatus; page?: number };
+export type DashboardView = { status?: SubmissionStatus; page?: number; q?: string };
 
-function viewQuery({ status, page = 1 }: DashboardView) {
+function viewQuery({ status, page = 1, q }: DashboardView) {
   const query = new URLSearchParams();
   if (status) query.set("status", status);
+  if (q) query.set("q", q);
   if (page > 1) query.set("page", String(page));
   const search = query.toString();
   return search ? `?${search}` : "";

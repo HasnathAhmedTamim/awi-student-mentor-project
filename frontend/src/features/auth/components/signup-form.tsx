@@ -2,10 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FormError } from "@/components/shared/form-error";
 import { fieldDescriptionId, FormField } from "@/components/shared/form-field";
+import { PasswordInput } from "@/components/shared/password-input";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { useResetWhenHidden } from "@/hooks/use-reset-when-hidden";
@@ -17,6 +19,7 @@ import type { User } from "@/types/user";
 
 export function SignupForm() {
   const router = useRouter();
+  const [navigating, startNavigation] = useTransition();
   const {
     register,
     handleSubmit,
@@ -34,8 +37,10 @@ export function SignupForm() {
       const { data } = await api.post<{ user: User }>("/auth/signup", { name, email, password });
       resetWhenHidden();
       toast.success("Account created. Welcome!");
-      router.replace(dashboardPath(data.user.role));
-      router.refresh();
+      startNavigation(() => {
+        router.replace(dashboardPath(data.user.role));
+        router.refresh();
+      });
     } catch (error) {
       applyApiError(error, setError, ["name", "email", "password"]);
     }
@@ -49,17 +54,20 @@ export function SignupForm() {
         <Input
           id="name"
           autoComplete="name"
+          autoFocus
+          placeholder="Enter your full name"
           aria-invalid={!!errors.name}
           aria-describedby={fieldDescriptionId("name")}
           {...register("name")}
         />
       </FormField>
 
-      <FormField id="email" label="Email" error={errors.email?.message}>
+      <FormField id="email" label="Email address" error={errors.email?.message}>
         <Input
           id="email"
           type="email"
           autoComplete="email"
+          placeholder="you@example.com"
           aria-invalid={!!errors.email}
           aria-describedby={fieldDescriptionId("email")}
           {...register("email")}
@@ -72,10 +80,10 @@ export function SignupForm() {
         error={errors.password?.message}
         hint="At least 8 characters, including a letter and a number."
       >
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="new-password"
+          placeholder="Create a password"
           aria-invalid={!!errors.password}
           aria-describedby={fieldDescriptionId("password")}
           {...register("password")}
@@ -83,17 +91,17 @@ export function SignupForm() {
       </FormField>
 
       <FormField id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>
-        <Input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           autoComplete="new-password"
+          placeholder="Re-enter your password"
           aria-invalid={!!errors.confirmPassword}
           aria-describedby={fieldDescriptionId("confirmPassword")}
           {...register("confirmPassword")}
         />
       </FormField>
 
-      <SubmitButton pending={isSubmitting} pendingLabel="Creating account…" className="w-full">
+      <SubmitButton pending={isSubmitting || navigating} pendingLabel="Creating account…" className="w-full">
         Create account
       </SubmitButton>
     </form>

@@ -1,9 +1,10 @@
-import { Role } from "../../generated/prisma/client.js";
+import { Role, type Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { isUniqueConstraintError } from "../../lib/prisma-errors.js";
 import type { AuthUser } from "../../types/auth.js";
 import { AppError } from "../../utils/app-error.js";
-import { buildPaginationMeta, toSkipTake, type PaginationQuery } from "../../utils/pagination.js";
+import { buildPaginationMeta, toSkipTake } from "../../utils/pagination.js";
+import { containsText } from "../../utils/search.js";
 import { normalizeGithubUrl } from "./github-url.js";
 import {
   submissionDetailSelect,
@@ -11,6 +12,7 @@ import {
   type CreateSubmissionInput,
   type SubmissionDetail,
 } from "./submissions.types.js";
+import type { ListMySubmissionsQuery } from "./submissions.validation.js";
 
 export async function createSubmission(studentId: string, input: CreateSubmissionInput) {
   try {
@@ -34,8 +36,14 @@ export async function createSubmission(studentId: string, input: CreateSubmissio
   }
 }
 
-export async function listStudentSubmissions(studentId: string, pagination: PaginationQuery) {
-  const where = { studentId };
+export async function listStudentSubmissions(
+  studentId: string,
+  { q, ...pagination }: ListMySubmissionsQuery,
+) {
+  const where: Prisma.SubmissionWhereInput = {
+    studentId,
+    ...(q && { OR: [{ projectName: containsText(q) }, { repositoryUrl: containsText(q) }] }),
+  };
   const [submissions, total] = await Promise.all([
     prisma.submission.findMany({
       where,

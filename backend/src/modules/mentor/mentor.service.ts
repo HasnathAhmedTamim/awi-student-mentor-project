@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { isForeignKeyConstraintError } from "../../lib/prisma-errors.js";
 import { AppError } from "../../utils/app-error.js";
 import { buildPaginationMeta, toSkipTake } from "../../utils/pagination.js";
+import { containsText } from "../../utils/search.js";
 import { submissionDetailSelect, submissionSelect } from "../submissions/submissions.types.js";
 import type { ListMentorSubmissionsQuery, ReviewSubmissionInput } from "./mentor.validation.js";
 
@@ -11,13 +12,26 @@ const mentorSubmissionSelect = {
   student: { select: { id: true, name: true, email: true } },
 } satisfies Prisma.SubmissionSelect;
 
-export async function listSubmissions({ status, ...pagination }: ListMentorSubmissionsQuery) {
-  const where: Prisma.SubmissionWhereInput = status ? { status } : {};
+export async function listSubmissions({ status, q, ...pagination }: ListMentorSubmissionsQuery) {
+  const where: Prisma.SubmissionWhereInput = {
+    ...(status && { status }),
+    ...(q && {
+      OR: [
+        { projectName: containsText(q) },
+        { repositoryUrl: containsText(q) },
+        { student: { name: containsText(q) } },
+        { student: { email: containsText(q) } },
+      ],
+    }),
+  };
   const [submissions, total] = await Promise.all([
     prisma.submission.findMany({
       where,
       select: mentorSubmissionSelect,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      orderBy:
+        status === SubmissionStatus.PENDING
+          ? [{ createdAt: "asc" }, { id: "asc" }]
+          : [{ createdAt: "desc" }, { id: "desc" }],
       ...toSkipTake(pagination),
     }),
     prisma.submission.count({ where }),

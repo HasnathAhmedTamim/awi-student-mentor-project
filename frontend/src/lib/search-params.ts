@@ -14,6 +14,13 @@ export function parsePageParam(value: SearchParamValue) {
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
+export const SEARCH_MAX_LENGTH = 100;
+
+/** Reads a `?q=` search param, trimmed and cut to the length the API accepts. */
+export function parseSearchParam(value: SearchParamValue) {
+  return (first(value) ?? "").trim().slice(0, SEARCH_MAX_LENGTH);
+}
+
 /** Reads a `?status=` search param; unknown values mean "all statuses". */
 export function parseStatusParam(value: SearchParamValue): SubmissionStatus | undefined {
   const status = first(value);

@@ -10,8 +10,10 @@ type EmptyStateProps = {
 
 export function EmptyState({ title, description, action, titleAs: Title = "h2" }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-12 text-center">
-      <InboxIcon className="size-8 text-muted-foreground" aria-hidden="true" />
+    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed bg-card px-6 py-14 text-center">
+      <span className="grid size-12 place-items-center rounded-full bg-secondary text-secondary-foreground">
+        <InboxIcon className="size-6" aria-hidden="true" />
+      </span>
       <div className="space-y-1">
         <Title className="font-medium">{title}</Title>
         {description && (

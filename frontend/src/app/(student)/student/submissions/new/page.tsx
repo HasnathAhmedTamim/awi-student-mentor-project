@@ -1,6 +1,6 @@
 import { ArrowLeftIcon } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import { AppLink } from "@/components/shared/app-link";
 import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,19 +16,17 @@ export default async function NewSubmissionPage() {
   return (
     <PageContainer className="max-w-2xl space-y-4">
       <Button asChild variant="ghost" size="sm" className="-ml-2">
-        <Link href="/student/dashboard">
+        <AppLink href="/student/dashboard">
           <ArrowLeftIcon aria-hidden="true" />
           Back to dashboard
-        </Link>
+        </AppLink>
       </Button>
-      <Card>
+      <Card className="shadow-xs">
         <CardHeader>
-          <CardTitle className="text-xl">
+          <CardTitle className="text-xl sm:text-2xl">
             <h1>Submit a project</h1>
           </CardTitle>
-          <CardDescription>
-            A mentor will review it. You can submit a repository again only if it was rejected.
-          </CardDescription>
+          <CardDescription>Provide your project details for mentor review.</CardDescription>
         </CardHeader>
         <CardContent>
           <SubmissionForm />

@@ -115,6 +115,21 @@ describe("GET /api/mentor/submissions", () => {
     expect(rejected.body.data.submissions[0].status).toBe("REJECTED");
   });
 
+  it("lists pending submissions oldest first", async () => {
+    await seedSubmissions();
+
+    const res = await request(app)
+      .get("/api/mentor/submissions?status=PENDING")
+      .set("Cookie", await createMentorCookie());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.submissions.map((s: { projectName: string }) => s.projectName)).toEqual([
+      "PENDING 2026-01-01",
+      "PENDING 2026-01-03",
+      "PENDING 2026-01-05",
+    ]);
+  });
+
   it("combines the status filter with pagination", async () => {
     await seedSubmissions();
 
@@ -124,7 +139,7 @@ describe("GET /api/mentor/submissions", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.submissions.map((s: { projectName: string }) => s.projectName)).toEqual([
-      "PENDING 2026-01-01",
+      "PENDING 2026-01-05",
     ]);
     expect(res.body.meta).toEqual({ page: 2, limit: 2, total: 3, totalPages: 2 });
   });
@@ -141,7 +156,75 @@ describe("GET /api/mentor/submissions", () => {
     expect(res.body.meta).toEqual({ page: 9, limit: 10, total: 5, totalPages: 1 });
   });
 
-  it.each(["status=pending", "status=ALL", "status=", "page=0", "limit=100"])(
+  it("searches project name, repository, student name and email, ignoring case", async () => {
+    const nadia = await createUser({ name: "Nadia Islam", email: "nadia@example.com" });
+    const rahim = await createUser({ name: "Rahim Uddin", email: "rahim@school.edu" });
+    await createSubmission(nadia.id, { projectName: "Weather Station", repo: "nadia/weather" });
+    await createSubmission(rahim.id, { projectName: "Todo App", repo: "rahim/tasks" });
+    await createSubmission(rahim.id, { projectName: "Chat", repo: "rahim/weather-bot" });
+    const cookie = await createMentorCookie();
+
+    const search = async (q: string) => {
+      const res = await request(app)
+        .get(`/api/mentor/submissions?q=${encodeURIComponent(q)}`)
+        .set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      return res.body.data.submissions.map((s: { projectName: string }) => s.projectName).sort();
+    };
+
+    expect(await search("WEATHER")).toEqual(["Chat", "Weather Station"]);
+    expect(await search("todo")).toEqual(["Todo App"]);
+    expect(await search("nadia isl")).toEqual(["Weather Station"]);
+    expect(await search("school.edu")).toEqual(["Chat", "Todo App"]);
+    expect(await search("nothing like this")).toEqual([]);
+    expect(await search("   ")).toEqual(["Chat", "Todo App", "Weather Station"]);
+  });
+
+  it("combines search with the status filter and pagination", async () => {
+    await seedSubmissions();
+
+    const res = await request(app)
+      .get("/api/mentor/submissions?q=second&status=PENDING&page=2&limit=1")
+      .set("Cookie", await createMentorCookie());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.submissions.map((s: { projectName: string }) => s.projectName)).toEqual([
+      "PENDING 2026-01-05",
+    ]);
+    expect(res.body.meta).toEqual({ page: 2, limit: 1, total: 2, totalPages: 2 });
+  });
+
+  it("matches %, _ and \\ literally instead of as wildcards", async () => {
+    const student = await createUser();
+    await createSubmission(student.id, { projectName: "100% done" });
+    await createSubmission(student.id, { projectName: "snake_case" });
+    await createSubmission(student.id, { projectName: "back\\slash" });
+    await createSubmission(student.id, { projectName: "Plain project" });
+    const cookie = await createMentorCookie();
+
+    for (const [q, expected] of [
+      ["%", ["100% done"]],
+      ["_", ["snake_case"]],
+      ["\\", ["back\\slash"]],
+    ] as const) {
+      const res = await request(app)
+        .get(`/api/mentor/submissions?q=${encodeURIComponent(q)}`)
+        .set("Cookie", cookie);
+      expect(res.body.data.submissions.map((s: { projectName: string }) => s.projectName)).toEqual(
+        expected,
+      );
+    }
+  });
+
+  it.each([
+    "status=pending",
+    "status=ALL",
+    "status=",
+    "page=0",
+    "limit=100",
+    `q=${"a".repeat(101)}`,
+    "q=a&q=b",
+  ])(
     "rejects invalid query parameters (%s)",
     async (query) => {
       const res = await request(app)

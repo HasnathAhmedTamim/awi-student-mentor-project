@@ -16,12 +16,15 @@ export async function getStatistics() {
 export async function getMentorSubmissions({
   page,
   status,
+  q,
 }: {
   page: number;
   status?: SubmissionStatus;
+  q?: string;
 }) {
   const query = new URLSearchParams({ page: String(page) });
   if (status) query.set("status", status);
+  if (q) query.set("q", q);
 
   const { data, meta } = await serverApiRequest<{ submissions: MentorSubmission[] }>(
     `/mentor/submissions?${query}`,

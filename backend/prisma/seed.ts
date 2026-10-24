@@ -12,19 +12,28 @@ const seedEnvSchema = z.object({
 async function main() {
   const seedEnv = seedEnvSchema.parse(process.env);
 
-  const mentor = await prisma.user.upsert({
+  const existing = await prisma.user.findUnique({
     where: { email: seedEnv.SEED_MENTOR_EMAIL },
-    update: { role: Role.MENTOR },
-    create: {
-      name: seedEnv.SEED_MENTOR_NAME,
-      email: seedEnv.SEED_MENTOR_EMAIL,
-      passwordHash: await hashPassword(seedEnv.SEED_MENTOR_PASSWORD),
-      role: Role.MENTOR,
-    },
-    select: { email: true, role: true },
+    select: { role: true },
   });
 
-  console.log(`Seeded ${mentor.role}: ${mentor.email}`);
+  if (existing && existing.role !== Role.MENTOR) {
+    throw new Error("The configured mentor email belongs to a non-mentor account; refusing to change its role.");
+  }
+
+  const mentor =
+    existing ??
+    (await prisma.user.create({
+      data: {
+        name: seedEnv.SEED_MENTOR_NAME,
+        email: seedEnv.SEED_MENTOR_EMAIL,
+        passwordHash: await hashPassword(seedEnv.SEED_MENTOR_PASSWORD),
+        role: Role.MENTOR,
+      },
+      select: { role: true },
+    }));
+
+  console.log(`Verified mentor account (${mentor.role}).`);
 }
 
 main()

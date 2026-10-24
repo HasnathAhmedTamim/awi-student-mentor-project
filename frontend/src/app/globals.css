@@ -49,24 +49,24 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.985 0.003 264);
+  --foreground: oklch(0.145 0.005 264);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.145 0.005 264);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.145 0.005 264);
+  --primary: oklch(0.511 0.23 277);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.962 0.018 272);
+  --secondary-foreground: oklch(0.359 0.144 278);
+  --muted: oklch(0.967 0.003 264);
+  --muted-foreground: oklch(0.52 0.012 264);
+  --accent: oklch(0.962 0.018 272);
+  --accent-foreground: oklch(0.359 0.144 278);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.922 0.004 264);
+  --input: oklch(0.9 0.006 264);
+  --ring: oklch(0.585 0.233 277);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -90,8 +90,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.673 0.182 277);
+  --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -129,5 +129,38 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Thin bar at the top of the window while a clicked link is still loading. */
+.nav-progress {
+  position: fixed;
+  inset: 0 auto auto 0;
+  z-index: 100;
+  height: 3px;
+  width: 0;
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary);
+  opacity: 0;
+  animation:
+    nav-progress-show 150ms ease-out 120ms forwards,
+    nav-progress-grow 8s cubic-bezier(0.1, 0.7, 0.2, 1) 120ms forwards;
+}
+
+@keyframes nav-progress-show {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes nav-progress-grow {
+  to {
+    width: 90%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress {
+    width: 100%;
+    animation: nav-progress-show 150ms ease-out 120ms forwards;
   }
 }

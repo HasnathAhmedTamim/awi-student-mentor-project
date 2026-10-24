@@ -5,14 +5,19 @@ type FormFieldProps = {
   label: string;
   error?: string;
   hint?: string;
+  /** Shown next to the label, e.g. a character count. */
+  aside?: React.ReactNode;
   children: React.ReactNode;
 };
 
 /** Label + control + hint/error. The control should set `aria-describedby={fieldDescriptionId(id)}`. */
-export function FormField({ id, label, error, hint, children }: FormFieldProps) {
+export function FormField({ id, label, error, hint, aside, children }: FormFieldProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-baseline justify-between gap-2">
+        <Label htmlFor={id}>{label}</Label>
+        {aside && <span className="text-xs text-muted-foreground tabular-nums">{aside}</span>}
+      </div>
       {children}
       {error ? (
         <p id={fieldDescriptionId(id)} role="alert" className="text-sm text-destructive">

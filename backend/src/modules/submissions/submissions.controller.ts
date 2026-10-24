@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
 import { getAuthUser } from "../../middlewares/authenticate.js";
 import { sendSuccess } from "../../utils/api-response.js";
-import type { PaginationQuery } from "../../utils/pagination.js";
 import * as submissionsService from "./submissions.service.js";
 import type { CreateSubmissionInput } from "./submissions.types.js";
+import type { ListMySubmissionsQuery } from "./submissions.validation.js";
 
 export async function create(req: Request<object, unknown, CreateSubmissionInput>, res: Response) {
   const submission = await submissionsService.createSubmission(getAuthUser(req).id, req.body);
@@ -13,7 +13,7 @@ export async function create(req: Request<object, unknown, CreateSubmissionInput
 export async function listMine(req: Request, res: Response) {
   const { submissions, meta } = await submissionsService.listStudentSubmissions(
     getAuthUser(req).id,
-    req.query as unknown as PaginationQuery,
+    req.query as unknown as ListMySubmissionsQuery,
   );
   sendSuccess(res, { submissions }, { meta });
 }

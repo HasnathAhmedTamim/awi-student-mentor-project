@@ -1,0 +1,688 @@
+{
+  "info": {
+    "_postman_id": "d22be16a-044f-4d57-bf9d-4de21959a8d6",
+    "name": "AWI Student Mentor Assessment API",
+    "description": "Run requests in collection order. The workflow creates a uniquely named student and three submissions per run; the API has no delete endpoint, so these records remain in the configured database. Never point this workflow at production data.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Student signup",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = Date.now().toString(36);",
+                  "pm.environment.set('testRunId', runId);",
+                  "pm.environment.set('projectPrefix', `Assessment-${runId}`);",
+                  "pm.environment.set('studentEmail', `assessment-${runId}@example.test`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('signup returns 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('signup creates a student account', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.user.role).to.eql('STUDENT');",
+                  "});",
+                  "pm.environment.set('studentId', body.data.user.id);",
+                  "const token = (pm.response.headers.get('Set-Cookie') || '').match(/(?:^|[,; ]+)access_token=([^;, ]+)/)?.[1];",
+                  "pm.test('signup sets an auth cookie', () => pm.expect(token).to.be.a('string').and.not.empty);",
+                  "if (token) pm.environment.set('studentToken', token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Assessment Student {{testRunId}}\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/signup"
+          }
+        },
+        {
+          "name": "Student current user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('current user returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('current user is the signed-up student', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.user.id).to.eql(pm.environment.get('studentId'));",
+                  "  pm.expect(body.data.user.role).to.eql('STUDENT');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{studentToken}}" }],
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Mentor login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('mentor login returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('login authenticates the seeded mentor', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.user.role).to.eql('MENTOR');",
+                  "});",
+                  "const token = (pm.response.headers.get('Set-Cookie') || '').match(/(?:^|[,; ]+)access_token=([^;, ]+)/)?.[1];",
+                  "pm.test('mentor login sets an auth cookie', () => pm.expect(token).to.be.a('string').and.not.empty);",
+                  "if (token) pm.environment.set('mentorToken', token);",
+                  "pm.environment.set('mentorId', body.data.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{mentorEmail}}\",\n  \"password\": \"{{mentorPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Mentor current user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('current user returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('current user is the mentor', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.user.id).to.eql(pm.environment.get('mentorId'));",
+                  "  pm.expect(body.data.user.role).to.eql('MENTOR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{mentorToken}}" }],
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student Submissions",
+      "item": [
+        {
+          "name": "Create pending submission for approval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('submission is created with 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('new submission is pending', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.submission.status).to.eql('PENDING');",
+                  "});",
+                  "pm.environment.set('approvalSubmissionId', body.data.submission.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "access_token={{studentToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectName\": \"{{projectPrefix}} approved\",\n  \"repositoryUrl\": \"https://github.com/awi-assessment-e2e/{{testRunId}}-approved\",\n  \"liveUrl\": \"https://{{testRunId}}-approved.vercel.app\",\n  \"description\": \"Assessment API workflow submission for approval verification.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/submissions"
+          }
+        },
+        {
+          "name": "Create pending submission for rejection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('submission is created with 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('new submission is pending', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.submission.status).to.eql('PENDING');",
+                  "});",
+                  "pm.environment.set('rejectionSubmissionId', body.data.submission.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "access_token={{studentToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectName\": \"{{projectPrefix}} rejected\",\n  \"repositoryUrl\": \"https://github.com/awi-assessment-e2e/{{testRunId}}-rejected\",\n  \"liveUrl\": \"https://{{testRunId}}-rejected.vercel.app\",\n  \"description\": \"Assessment API workflow submission for rejection verification.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/submissions"
+          }
+        },
+        {
+          "name": "Reject duplicate repository submission",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('duplicate is rejected with 409', () => pm.response.to.have.status(409));",
+                  "pm.test('duplicate error is explicit', () => pm.expect(pm.response.json().code).to.eql('DUPLICATE_SUBMISSION'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "access_token={{studentToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectName\": \"{{projectPrefix}} duplicate\",\n  \"repositoryUrl\": \"https://github.com/awi-assessment-e2e/{{testRunId}}-approved\",\n  \"liveUrl\": \"https://{{testRunId}}-duplicate.vercel.app\",\n  \"description\": \"This duplicate repository should be rejected by the API.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/submissions"
+          }
+        },
+        {
+          "name": "List my submissions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('student list returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('student list is paginated and contains both new submissions', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.meta.page).to.eql(1);",
+                  "  pm.expect(body.meta.limit).to.eql(10);",
+                  "  const ids = body.data.submissions.map((item) => item.id);",
+                  "  pm.expect(ids).to.include(pm.environment.get('approvalSubmissionId'));",
+                  "  pm.expect(ids).to.include(pm.environment.get('rejectionSubmissionId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{studentToken}}" }],
+            "url": "{{baseUrl}}/api/submissions/mine?page=1&limit=10"
+          }
+        },
+        {
+          "name": "View submission details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('submission details return 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('student can read their own pending project', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.submission.id).to.eql(pm.environment.get('approvalSubmissionId'));",
+                  "  pm.expect(body.data.submission.status).to.eql('PENDING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{studentToken}}" }],
+            "url": "{{baseUrl}}/api/submissions/{{approvalSubmissionId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mentor Review & Statistics",
+      "item": [
+        {
+          "name": "Statistics before decisions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statistics return 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('statistics include total status counts', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.statistics.total).to.eql(body.data.statistics.pending + body.data.statistics.approved + body.data.statistics.rejected);",
+                  "  pm.expect(body.data.statistics.pending).to.be.at.least(2);",
+                  "});",
+                  "pm.environment.set('pendingBefore', body.data.statistics.pending);",
+                  "pm.environment.set('approvedBefore', body.data.statistics.approved);",
+                  "pm.environment.set('rejectedBefore', body.data.statistics.rejected);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{mentorToken}}" }],
+            "url": "{{baseUrl}}/api/mentor/statistics"
+          }
+        },
+        {
+          "name": "Search pending submissions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('mentor list returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('status and search filter run on the server', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.submissions.length).to.be.at.least(1);",
+                  "  pm.expect(body.data.submissions.every((item) => item.status === 'PENDING')).to.eql(true);",
+                  "  pm.expect(body.data.submissions.map((item) => item.id)).to.include(pm.environment.get('approvalSubmissionId'));",
+                  "  pm.expect(body.meta.limit).to.eql(10);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{mentorToken}}" }],
+            "url": "{{baseUrl}}/api/mentor/submissions?status=PENDING&q={{projectPrefix}}%20approved&page=1&limit=10"
+          }
+        },
+        {
+          "name": "Mentor views submission",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('mentor submission detail returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('mentor can read student project details', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.submission.id).to.eql(pm.environment.get('approvalSubmissionId'));",
+                  "  pm.expect(body.data.submission.student.email).to.eql(pm.environment.get('studentEmail'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{mentorToken}}" }],
+            "url": "{{baseUrl}}/api/submissions/{{approvalSubmissionId}}"
+          }
+        },
+        {
+          "name": "Approve submission",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('approval returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('approval records status and reviewer', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.submission.status).to.eql('APPROVED');",
+                  "  pm.expect(body.data.submission.reviewedBy.id).to.eql(pm.environment.get('mentorId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "access_token={{mentorToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"reviewNote\": \"The project meets the assessment requirements.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/mentor/submissions/{{approvalSubmissionId}}/status"
+          }
+        },
+        {
+          "name": "Verify approval statistics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('updated statistics return 200', () => pm.response.to.have.status(200));",
+                  "const stats = pm.response.json().data.statistics;",
+                  "pm.test('approval updates database totals', () => {",
+                  "  pm.expect(stats.pending).to.eql(Number(pm.environment.get('pendingBefore')) - 1);",
+                  "  pm.expect(stats.approved).to.eql(Number(pm.environment.get('approvedBefore')) + 1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{mentorToken}}" }],
+            "url": "{{baseUrl}}/api/mentor/statistics"
+          }
+        },
+        {
+          "name": "Reject submission with feedback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rejection returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('rejection stores the feedback', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.submission.status).to.eql('REJECTED');",
+                  "  pm.expect(body.data.submission.reviewNote).to.eql('Please include clearer setup instructions.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "access_token={{mentorToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REJECTED\",\n  \"reviewNote\": \"Please include clearer setup instructions.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/mentor/submissions/{{rejectionSubmissionId}}/status"
+          }
+        },
+        {
+          "name": "Resubmit rejected repository",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('resubmission is created with 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('rejected repository can be resubmitted as pending', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.submission.status).to.eql('PENDING');",
+                  "});",
+                  "pm.environment.set('resubmissionId', body.data.submission.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "access_token={{studentToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectName\": \"{{projectPrefix}} resubmitted\",\n  \"repositoryUrl\": \"https://github.com/awi-assessment-e2e/{{testRunId}}-rejected\",\n  \"liveUrl\": \"https://{{testRunId}}-resubmitted.vercel.app\",\n  \"description\": \"This project was rejected and is now submitted again for review.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/submissions"
+          }
+        },
+        {
+          "name": "Approve resubmitted project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('resubmitted project approval returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('resubmitted project can be reviewed', () => {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data.submission.id).to.eql(pm.environment.get('resubmissionId'));",
+                  "  pm.expect(body.data.submission.status).to.eql('APPROVED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "access_token={{mentorToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"reviewNote\": \"Thanks for addressing the feedback.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/mentor/submissions/{{resubmissionId}}/status"
+          }
+        },
+        {
+          "name": "Verify final statistics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('final statistics return 200', () => pm.response.to.have.status(200));",
+                  "const stats = pm.response.json().data.statistics;",
+                  "pm.test('final statistics reflect both decisions and resubmission', () => {",
+                  "  pm.expect(stats.pending).to.eql(Number(pm.environment.get('pendingBefore')) - 2);",
+                  "  pm.expect(stats.approved).to.eql(Number(pm.environment.get('approvedBefore')) + 2);",
+                  "  pm.expect(stats.rejected).to.eql(Number(pm.environment.get('rejectedBefore')) + 1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{mentorToken}}" }],
+            "url": "{{baseUrl}}/api/mentor/statistics"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authorization/Validation Tests",
+      "item": [
+        {
+          "name": "API health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('health returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('health reports success', () => pm.expect(pm.response.json().data.status).to.eql('ok'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/health"
+          }
+        },
+        {
+          "name": "Student cannot read mentor statistics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('student access is forbidden with 403', () => pm.response.to.have.status(403));",
+                  "pm.test('error code is FORBIDDEN', () => pm.expect(pm.response.json().code).to.eql('FORBIDDEN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token={{studentToken}}" }],
+            "url": "{{baseUrl}}/api/mentor/statistics"
+          }
+        },
+        {
+          "name": "Reject invalid submission fields",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('invalid submission returns 400', () => pm.response.to.have.status(400));",
+                  "pm.test('validation response identifies invalid input', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "access_token={{studentToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"projectName\":\"x\"}" },
+            "url": "{{baseUrl}}/api/submissions"
+          }
+        },
+        {
+          "name": "Reject rejection without feedback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('missing rejection feedback returns 400', () => pm.response.to.have.status(400));",
+                  "pm.test('validation error identifies reviewNote', () => {",
+                  "  const error = pm.response.json();",
+                  "  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+                  "  pm.expect(error.details.some((item) => item.field === 'reviewNote')).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "access_token={{mentorToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\":\"REJECTED\",\"reviewNote\":\"  \"}" },
+            "url": "{{baseUrl}}/api/mentor/submissions/{{rejectionSubmissionId}}/status"
+          }
+        },
+        {
+          "name": "Reject missing authentication",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('missing authentication returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('error code is UNAUTHENTICATED', () => pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Cookie", "value": "access_token=" }],
+            "url": "{{anonymousBaseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Student logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('logout returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('logout clears the cookie', () => pm.expect(pm.response.headers.get('Set-Cookie')).to.include('access_token=;'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Cookie", "value": "access_token={{studentToken}}" }],
+            "url": "{{baseUrl}}/api/auth/logout"
+          }
+        }
+      ]
+    }
+  ]
+}

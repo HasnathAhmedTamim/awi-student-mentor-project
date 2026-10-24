@@ -3,7 +3,10 @@
 A full-stack dashboard where students submit their projects and mentors review, approve or reject them.
 
 - **Students** sign up, submit projects (name, GitHub repository, live URL, description) and follow each submission's status and the mentor's feedback.
-- **Mentors** see statistics for all submissions, filter and page through them on the server, and approve or reject pending ones with a note (required when rejecting). A student can submit a rejected project again.
+- **Students** can search and paginate through their own submissions.
+- **Mentors** see statistics for all submissions, search by project, repository, student or email, filter by status, and page through results on the server. Pending reviews are ordered oldest first.
+- **Mentors** can preview project links and approve or reject pending submissions with a note (required when rejecting). A student can submit a rejected project again.
+- **Responsive review pages** keep project details, student information, links, and review feedback usable on phones, tablets and desktops.
 
 Access is protected with JWT authentication in an HttpOnly cookie and role-based access control (`STUDENT`, `MENTOR`) enforced by the API.
 
@@ -70,6 +73,18 @@ npm run db:seed      # create the mentor from SEED_MENTOR_*
 
 The seed is safe to run again: it never creates a second mentor and never changes an existing password.
 
+For a reviewer demo, `npm run db:seed:demo` adds two demo students and 14 submissions (12 pending, 1 approved, 1 rejected). It creates only missing demo records, preserves existing submissions and review decisions, and refuses to change an existing account's role. It is allowed for local `awi_dev`; using Neon requires an explicit opt-in:
+
+```powershell
+$env:SEED_ALLOW_NEON_DEMO = "true"
+npm run db:seed:demo
+Remove-Item Env:SEED_ALLOW_NEON_DEMO
+```
+
+Neon seeding requires a `*.neon.tech` host and database named `neondb`; the test database and other hosts/databases are rejected. Set `SEED_DEMO_STUDENT_PASSWORD` in `backend/.env` before seeding if you want a known password for both demo students. Otherwise, when it creates new student accounts, the script generates one shared password and prints it once in the terminal. Existing demo student passwords are not reset by rerunning the seed. The mentor login uses `SEED_MENTOR_EMAIL` and `SEED_MENTOR_PASSWORD`; an existing mentor password is not changed.
+
+The project has `STUDENT` and `MENTOR` roles; there is no Admin role or Admin seed account.
+
 ### 2. Frontend
 
 ```bash
@@ -96,17 +111,18 @@ Open http://localhost:3000.
 **Student**
 
 1. Open http://localhost:3000 and choose **Sign up as a student**. You are logged in and taken to your dashboard.
-2. Choose **New submission** and submit a project, for example repository `https://github.com/your-name/your-project` and live URL `https://your-project.vercel.app`.
+2. Choose **Submit project** and submit a project, for example repository `https://github.com/your-name/your-project` and live URL `https://your-project.vercel.app`.
 3. The project appears on your dashboard as **Pending**.
 4. Submit the same repository again (try `https://github.com/YOUR-NAME/your-project.git`): the form shows "This repository is already pending review or approved."
-5. Log out.
+5. Search and paginate the student submission list, then open a submission to see its status and mentor feedback.
+6. Log out.
 
 **Mentor**
 
 1. Log in with the `SEED_MENTOR_EMAIL` and `SEED_MENTOR_PASSWORD` from `backend/.env`.
-2. The dashboard shows statistics (total, pending, approved, rejected) and a paginated table of all submissions.
-3. Filter by **Pending** and open the student's project.
-4. Write a review note (required to reject, optional to approve), choose **Approve** or **Reject**, and confirm. The statistics and table update.
+2. The dashboard shows statistics (total, pending, approved, rejected), search, and a paginated table of all submissions.
+3. Filter by **Pending** and open the oldest waiting project first.
+4. Write a review note (required to reject, optional to approve), choose **Approve** or **Reject**, and confirm. Choose **Review next pending submission** to continue through the queue.
 5. Log out, log in as the student again and open the project: the status and the mentor's note are shown. If it was rejected, **Submit again** opens the form, and the same repository is accepted as a new pending submission.
 
 **Security checks with an API client** (Postman, curl): log in as the student, then call `GET /api/mentor/statistics` or `PATCH /api/mentor/submissions/<id>/status` → `403 FORBIDDEN`. Without a cookie → `401 UNAUTHENTICATED`. See [`docs/API.md`](docs/API.md).
@@ -115,13 +131,12 @@ Open http://localhost:3000.
 
 ### Backend tests
 
-The tests run against a separate **local** PostgreSQL database and delete all of its data on every run. The test setup refuses any database host other than `localhost`.
+Backend tests require a separate **local** PostgreSQL test database. Create `awi_test`, copy `.env.test.example` to `.env.test`, and set its local PostgreSQL credentials. The test setup applies migrations and truncates test tables; it refuses non-local database hosts. Never point `.env.test` at Neon or a database containing data you need to keep.
 
 ```bash
 createdb awi_test                  # or create the database in pgAdmin
 cd backend
-cp .env.test.example .env.test     # set your local postgres password
-npm test                           # applies the migrations to awi_test, then runs Vitest
+npm test                           # applies migrations to awi_test, then runs Vitest
 ```
 
 They cover signup and login, token handling (missing, malformed, wrong secret, unsigned, expired), role checks on every protected endpoint, submission validation and duplicates, resubmission after rejection, ownership, pagination and filtering, statistics, approval and rejection (with the required note), repeated and concurrent reviews, and rate limiting.

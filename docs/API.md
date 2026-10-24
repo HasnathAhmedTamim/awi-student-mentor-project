@@ -94,7 +94,7 @@ List endpoints accept:
 | `page` | integer | `1` | At least 1. A page past the end returns an empty list with the real `total`. |
 | `limit` | integer | `10` | 1–50. |
 
-Results are ordered newest first (`createdAt`, then `id` for a stable order). Paging and filtering happen in the database query.
+Results use stable ordering by `createdAt` and `id`. Mentor pending submissions are oldest first; other mentor results and student submissions are newest first. Paging and filtering happen in the database query.
 
 ### Rate limits
 
@@ -236,6 +236,11 @@ Errors: `400 VALIDATION_ERROR`, `401`, `403 FORBIDDEN` (mentors), `409 DUPLICATE
 
 `STUDENT` only. The current student's submissions.
 
+| Parameter | Rules |
+| --- | --- |
+| `page`, `limit` | See [Pagination](#pagination). |
+| `q` | Optional, case-insensitive substring match against project name or repository URL. |
+
 `200` → `{ "submissions": Submission[] }` plus `meta`.
 
 Errors: `400 VALIDATION_ERROR` (bad `page`/`limit`), `401`, `403`.
@@ -254,12 +259,13 @@ Every mentor endpoint requires the `MENTOR` role. Students get `403 FORBIDDEN`, 
 
 ### `GET /mentor/submissions?page=1&limit=10&status=PENDING`
 
-All students' submissions, newest first.
+All students' submissions. Pending submissions are ordered oldest first so the longest-waiting projects appear first; other results are newest first.
 
 | Parameter | Rules |
 | --- | --- |
 | `page`, `limit` | See [Pagination](#pagination). |
 | `status` | Optional. `PENDING`, `APPROVED` or `REJECTED`. Omit it for all submissions. Any other value is a `400`. |
+| `q` | Optional, case-insensitive substring match against project name, repository URL, student name or student email. |
 
 `200` → `{ "submissions": MentorSubmission[] }` plus `meta`. Each item is a Submission with `student: { id, name, email }`. `meta.total` counts only submissions matching the filter.
 

@@ -3,11 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { FormError } from "@/components/shared/form-error";
 import { fieldDescriptionId, FormField } from "@/components/shared/form-field";
+import { AppLink } from "@/components/shared/app-link";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useResetWhenHidden } from "@/hooks/use-reset-when-hidden";
@@ -26,11 +28,13 @@ export function SubmissionForm() {
     handleSubmit,
     setError,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<SubmissionValues>({
     resolver: zodResolver(submissionSchema),
     defaultValues: { projectName: "", repositoryUrl: "", liveUrl: "", description: "" },
   });
+  const descriptionLength = useWatch({ control, name: "description" }).length;
   const resetWhenHidden = useResetWhenHidden(
     useCallback(() => {
       reset();
@@ -53,12 +57,15 @@ export function SubmissionForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+      <p className="text-sm text-muted-foreground">All fields are required.</p>
       <FormError message={errors.root?.message} />
 
-      <FormField id="projectName" label="Project name" error={errors.projectName?.message}>
+      <FormField id="projectName" label="Project name (required)" error={errors.projectName?.message}>
         <Input
           id="projectName"
           maxLength={120}
+          autoFocus
+          placeholder="e.g. Student Portfolio Website"
           aria-invalid={!!errors.projectName}
           aria-describedby={fieldDescriptionId("projectName")}
           {...register("projectName")}
@@ -67,9 +74,9 @@ export function SubmissionForm() {
 
       <FormField
         id="repositoryUrl"
-        label="GitHub repository URL"
+        label="GitHub repository URL (required)"
         error={errors.repositoryUrl?.message}
-        hint="For example https://github.com/your-name/your-project"
+        hint="Use a public GitHub repository URL, such as https://github.com/your-name/your-project. You can resubmit the same repository after it is rejected."
       >
         <Input
           id="repositoryUrl"
@@ -85,7 +92,7 @@ export function SubmissionForm() {
 
       <FormField
         id="liveUrl"
-        label="Live URL"
+        label="Live URL (required)"
         error={errors.liveUrl?.message}
         hint="Where the deployed project can be viewed."
       >
@@ -103,23 +110,30 @@ export function SubmissionForm() {
 
       <FormField
         id="description"
-        label="Description"
+        label="Description (required)"
         error={errors.description?.message}
-        hint="What the project does and which technologies it uses (10–2000 characters)."
+        hint="What the project does and which technologies it uses (at least 10 characters)."
+        aside={`${descriptionLength}/2000`}
       >
         <Textarea
           id="description"
           rows={6}
           maxLength={2000}
+          placeholder="Describe what your project does, its key features, and technologies used."
           aria-invalid={!!errors.description}
           aria-describedby={fieldDescriptionId("description")}
           {...register("description")}
         />
       </FormField>
 
-      <SubmitButton pending={isSubmitting || submitted} pendingLabel="Submitting…" className="w-full sm:w-auto">
-        Submit project
-      </SubmitButton>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button asChild variant="outline">
+          <AppLink href="/student/dashboard">Cancel</AppLink>
+        </Button>
+        <SubmitButton pending={isSubmitting || submitted} pendingLabel="Submitting…" className="w-full sm:w-auto">
+          Submit project
+        </SubmitButton>
+      </div>
     </form>
   );
 }

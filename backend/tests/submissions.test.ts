@@ -289,6 +289,25 @@ describe("GET /api/submissions/mine", () => {
     expect(res.body.meta).toEqual({ page: 2, limit: 2, total: 3, totalPages: 2 });
   });
 
+  it("searches only the student's own submissions by project name or repository", async () => {
+    const student = await createUser();
+    const otherStudent = await createUser();
+    await createSubmission(student.id, { projectName: "Weather Station", repo: "me/forecast" });
+    await createSubmission(student.id, { projectName: "Todo App", repo: "me/weather-tasks" });
+    await createSubmission(student.id, { projectName: "Chat", repo: "me/chat" });
+    await createSubmission(otherStudent.id, { projectName: "Weather Clone", repo: "other/weather" });
+
+    const res = await request(app)
+      .get("/api/submissions/mine?q=WEATHER")
+      .set("Cookie", authCookie(student));
+
+    expect(res.status).toBe(200);
+    expect(res.body.meta).toEqual({ page: 1, limit: 10, total: 2, totalPages: 1 });
+    expect(
+      res.body.data.submissions.map((s: { projectName: string }) => s.projectName).sort(),
+    ).toEqual(["Todo App", "Weather Station"]);
+  });
+
   it("returns an empty list with zero pages", async () => {
     const student = await createUser();
 
@@ -298,8 +317,8 @@ describe("GET /api/submissions/mine", () => {
     expect(res.body.meta).toEqual({ page: 1, limit: 10, total: 0, totalPages: 0 });
   });
 
-  it.each(["page=0", "page=abc", "limit=51", "limit=1.5"])(
-    "rejects invalid pagination (%s)",
+  it.each(["page=0", "page=abc", "limit=51", "limit=1.5", `q=${"a".repeat(101)}`])(
+    "rejects invalid query parameters (%s)",
     async (query) => {
       const student = await createUser();
 
