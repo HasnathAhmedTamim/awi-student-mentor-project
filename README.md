@@ -2,6 +2,13 @@
 
 A full-stack application for students to submit projects and mentors to review them. Students can track the status and feedback for each submission, while mentors can work through a searchable, paginated review queue.
 
+## Live deployment
+
+- **Frontend:** [Student Project Submission & Mentor Review](https://awi-student-mentor-project.vercel.app/)
+- **Backend API:** [Render API status](https://awi-student-mentor-project.onrender.com/)
+
+The API health check is available at [`/api/health`](https://awi-student-mentor-project.onrender.com/api/health).
+
 ## Project overview
 
 The application has two roles:
