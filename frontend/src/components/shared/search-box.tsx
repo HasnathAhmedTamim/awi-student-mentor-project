@@ -1,14 +1,14 @@
 "use client";
 
-import { Loader2Icon, SearchIcon, XIcon } from "lucide-react";
+import { SearchIcon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SEARCH_MAX_LENGTH } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 600;
 
 type SearchBoxProps = {
   /** The search currently in the URL. */
@@ -27,40 +27,63 @@ export function SearchBox({ value, basePath, params, label, placeholder, classNa
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const requested = useRef(value);
+  const navigationPending = useRef(false);
   const [text, setText] = useState(value);
-  const [requested, setRequested] = useState(value);
-  const [pending, startTransition] = useTransition();
-
-  // The URL changed without this box, e.g. through a "Clear search" link.
-  if (value !== requested) {
-    setRequested(value);
-    setText(value);
+  const preservedParams = new URLSearchParams();
+  for (const [key, param] of Object.entries(params ?? {})) {
+    if (param) preservedParams.set(key, param);
   }
+  const paramsKey = preservedParams.toString();
+
+  useEffect(() => {
+    if (value === requested.current) {
+      navigationPending.current = false;
+      return;
+    }
+    if (timer.current !== undefined || navigationPending.current) return;
+
+    requested.current = value;
+    setText(value);
+  }, [value]);
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  function search(next: string) {
+  const search = useCallback((next: string) => {
     clearTimeout(timer.current);
+    timer.current = undefined;
     const q = next.trim();
-    if (q === requested) return;
-    setRequested(q);
+    if (q === requested.current) return;
+    requested.current = q;
+    navigationPending.current = true;
 
-    const query = new URLSearchParams();
-    for (const [key, param] of Object.entries(params ?? {})) {
-      if (param) query.set(key, param);
-    }
+    const query = new URLSearchParams(paramsKey);
     if (q) query.set("q", q);
     const href = query.size ? `${basePath}?${query}` : basePath;
-    startTransition(() => router.replace(href, { scroll: false }));
-  }
+    router.replace(href, { scroll: false });
+  }, [basePath, paramsKey, router]);
+
+  useEffect(() => {
+    const q = text.trim();
+    if (q === requested.current) return;
+
+    const timeout = setTimeout(() => {
+      timer.current = undefined;
+      search(q);
+    }, DEBOUNCE_MS);
+    timer.current = timeout;
+
+    return () => {
+      clearTimeout(timeout);
+      if (timer.current === timeout) timer.current = undefined;
+    };
+  }, [search, text]);
 
   function clear() {
     setText("");
     search("");
     inputRef.current?.focus();
   }
-
-  const Icon = pending ? Loader2Icon : SearchIcon;
 
   return (
     <form
@@ -74,11 +97,8 @@ export function SearchBox({ value, basePath, params, label, placeholder, classNa
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <Icon
-        className={cn(
-          "pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground",
-          pending && "animate-spin",
-        )}
+      <SearchIcon
+        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
         aria-hidden="true"
       />
       <Input
@@ -89,13 +109,9 @@ export function SearchBox({ value, basePath, params, label, placeholder, classNa
         maxLength={SEARCH_MAX_LENGTH}
         placeholder={placeholder}
         autoComplete="off"
-        aria-busy={pending}
         className="h-9 bg-card pr-9 pl-9 [&::-webkit-search-cancel-button]:appearance-none"
         onChange={(event) => {
-          const next = event.target.value;
-          setText(next);
-          clearTimeout(timer.current);
-          timer.current = setTimeout(() => search(next), DEBOUNCE_MS);
+          setText(event.target.value);
         }}
         onKeyDown={(event) => {
           if (event.key === "Escape" && text) {

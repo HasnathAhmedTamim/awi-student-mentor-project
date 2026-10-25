@@ -7,6 +7,7 @@ The frontend is a responsive Next.js 16 App Router application built with React 
 - Student signup, login, project submission, and personal submission history.
 - Search and pagination for a student's submissions.
 - Mentor dashboard with submission statistics, status filters, searchable results, and pagination.
+- Dashboard search waits for 600 ms of typing inactivity before updating server results and the URL.
 - Pending-first review workflow, project preview links, approve/reject decisions, and **Review next** navigation.
 - Submission detail views that show status and review feedback to students.
 - Shared responsive layouts, form validation, loading/error states, and accessible UI components.
